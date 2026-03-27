@@ -1,0 +1,39 @@
+##
+## CondoHome - Documents Domain
+## Atas, regimento, convenção, balancetes, comunicados
+##
+
+version: '3.8'
+
+services:
+  documents:
+    image: ghcr.io/rmaneschy/ms-condohome-documents:${TAG:-latest}
+    container_name: condohome-documents
+    build:
+      context: ${DOCUMENTS_BUILD_CONTEXT:-../../../ms-condohome-documents}
+      dockerfile: Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${POSTGRES_HOST:-postgres}:5432/condohome_documents
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-condohome}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-condohome123}
+      SERVER_PORT: 8083
+    ports:
+      - "${DOCUMENTS_PORT:-8083}:8083"
+    networks:
+      - condohome-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+networks:
+  condohome-net:
+    external: true
+    name: condohome-net

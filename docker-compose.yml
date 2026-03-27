@@ -1,0 +1,341 @@
+##
+## CondoHome Platform - Master Docker Compose
+## Orquestra todos os domínios da plataforma
+##
+## Uso:
+##   Subir tudo:          docker compose --profile full up -d
+##   Apenas infra:        docker compose up -d
+##   Infra + tools:       docker compose --profile tools up -d
+##   Serviços backend:    docker compose --profile backend up -d
+##   Tudo + monitoring:   docker compose --profile full --profile tools up -d
+##
+
+version: '3.8'
+
+services:
+  # =====================================================
+  # SHARED INFRASTRUCTURE
+  # =====================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: condohome-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-condohome}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-condohome123}
+      POSTGRES_MULTIPLE_DATABASES: >-
+        condohome_register,
+        condohome_billing,
+        condohome_documents,
+        condohome_booking,
+        condohome_notification,
+        condohome_finance,
+        condohome_ai,
+        condohome_n8n
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/shared/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - condohome-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-condohome}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: condohome-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - condohome-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # =====================================================
+  # TOOLS (profile: tools)
+  # =====================================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: condohome-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@condohome.com.br}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin123}
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    networks:
+      - condohome-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - tools
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: condohome-redis-commander
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "${REDIS_COMMANDER_PORT:-8090}:8081"
+    networks:
+      - condohome-net
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - tools
+
+  # =====================================================
+  # BACKEND SERVICES (profile: backend, full)
+  # =====================================================
+  gateway:
+    image: ghcr.io/rmaneschy/ms-condohome-gateway:${TAG:-latest}
+    container_name: condohome-gateway
+    build:
+      context: ${GATEWAY_BUILD_CONTEXT:-../ms-condohome-gateway}
+      dockerfile: Dockerfile
+    environment:
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      REGISTER_SERVICE_URL: http://condohome-register:8081
+      BILLING_SERVICE_URL: http://condohome-billing:8082
+      DOCUMENTS_SERVICE_URL: http://condohome-documents:8083
+      AI_ASSISTANT_SERVICE_URL: http://condohome-ai-assistant:8085
+      NOTIFICATION_SERVICE_URL: http://condohome-notification:8086
+      BOOKING_SERVICE_URL: http://condohome-booking:8087
+      FINANCE_SERVICE_URL: http://condohome-finance:8088
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+    networks:
+      - condohome-net
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - backend
+      - full
+
+  register:
+    image: ghcr.io/rmaneschy/ms-condohome-register:${TAG:-latest}
+    container_name: condohome-register
+    build:
+      context: ${REGISTER_BUILD_CONTEXT:-../ms-condohome-register}
+      dockerfile: Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/condohome_register
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-condohome}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-condohome123}
+    ports:
+      - "${REGISTER_PORT:-8081}:8081"
+    networks:
+      - condohome-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - backend
+      - full
+
+  billing:
+    image: ghcr.io/rmaneschy/ms-condohome-billing:${TAG:-latest}
+    container_name: condohome-billing
+    build:
+      context: ${BILLING_BUILD_CONTEXT:-../ms-condohome-billing}
+      dockerfile: Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/condohome_billing
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-condohome}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-condohome123}
+      ASAAS_API_KEY: ${ASAAS_API_KEY:-}
+      ASAAS_ENVIRONMENT: ${ASAAS_ENVIRONMENT:-sandbox}
+    ports:
+      - "${BILLING_PORT:-8082}:8082"
+    networks:
+      - condohome-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - backend
+      - full
+
+  documents:
+    image: ghcr.io/rmaneschy/ms-condohome-documents:${TAG:-latest}
+    container_name: condohome-documents
+    build:
+      context: ${DOCUMENTS_BUILD_CONTEXT:-../ms-condohome-documents}
+      dockerfile: Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/condohome_documents
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-condohome}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-condohome123}
+    ports:
+      - "${DOCUMENTS_PORT:-8083}:8083"
+    networks:
+      - condohome-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - backend
+      - full
+
+  ai-assistant:
+    image: ghcr.io/rmaneschy/ms-condohome-ai-assistant:${TAG:-latest}
+    container_name: condohome-ai-assistant
+    build:
+      context: ${AI_ASSISTANT_BUILD_CONTEXT:-../ms-condohome-ai-assistant}
+      dockerfile: Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/condohome_ai
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-condohome}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-condohome123}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    ports:
+      - "${AI_ASSISTANT_PORT:-8085}:8085"
+    networks:
+      - condohome-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - backend
+      - full
+
+  notification:
+    image: ghcr.io/rmaneschy/ms-condohome-notification:${TAG:-latest}
+    container_name: condohome-notification
+    build:
+      context: ${NOTIFICATION_BUILD_CONTEXT:-../ms-condohome-notification}
+      dockerfile: Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/condohome_notification
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-condohome}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-condohome123}
+      SPRING_MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      SPRING_MAIL_PORT: ${MAIL_PORT:-587}
+      SPRING_MAIL_USERNAME: ${MAIL_USERNAME:-}
+      SPRING_MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+    ports:
+      - "${NOTIFICATION_PORT:-8086}:8086"
+    networks:
+      - condohome-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - backend
+      - full
+
+  booking:
+    image: ghcr.io/rmaneschy/ms-condohome-booking:${TAG:-latest}
+    container_name: condohome-booking
+    build:
+      context: ${BOOKING_BUILD_CONTEXT:-../ms-condohome-booking}
+      dockerfile: Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/condohome_booking
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-condohome}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-condohome123}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+    ports:
+      - "${BOOKING_PORT:-8087}:8087"
+    networks:
+      - condohome-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - backend
+      - full
+
+  finance:
+    image: ghcr.io/rmaneschy/ms-condohome-finance:${TAG:-latest}
+    container_name: condohome-finance
+    build:
+      context: ${FINANCE_BUILD_CONTEXT:-../ms-condohome-finance}
+      dockerfile: Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/condohome_finance
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-condohome}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-condohome123}
+    ports:
+      - "${FINANCE_PORT:-8088}:8088"
+    networks:
+      - condohome-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - backend
+      - full
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: condohome-n8n
+    environment:
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_USER: ${N8N_USER:-admin}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_PASSWORD:-admin123}
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: condohome_n8n
+      DB_POSTGRESDB_USER: ${POSTGRES_USER:-condohome}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-condohome123}
+      GENERIC_TIMEZONE: America/Sao_Paulo
+    volumes:
+      - n8n_data:/home/node/.n8n
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    networks:
+      - condohome-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - backend
+      - full
+
+volumes:
+  postgres_data:
+  redis_data:
+  pgadmin_data:
+  n8n_data:
+
+networks:
+  condohome-net:
+    driver: bridge
+    name: condohome-net

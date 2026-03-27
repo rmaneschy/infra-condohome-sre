@@ -1,0 +1,39 @@
+##
+## CondoHome - Finance Domain
+## Prestação de contas, centros de custo, despesas, receitas
+##
+
+version: '3.8'
+
+services:
+  finance:
+    image: ghcr.io/rmaneschy/ms-condohome-finance:${TAG:-latest}
+    container_name: condohome-finance
+    build:
+      context: ${FINANCE_BUILD_CONTEXT:-../../../ms-condohome-finance}
+      dockerfile: Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${POSTGRES_HOST:-postgres}:5432/condohome_finance
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-condohome}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-condohome123}
+      SERVER_PORT: 8088
+    ports:
+      - "${FINANCE_PORT:-8088}:8088"
+    networks:
+      - condohome-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8088/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+networks:
+  condohome-net:
+    external: true
+    name: condohome-net

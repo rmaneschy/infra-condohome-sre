@@ -1,0 +1,50 @@
+##
+## CondoHome - Notification Domain
+## WhatsApp, Email, Push (FCM)
+##
+
+version: '3.8'
+
+services:
+  notification:
+    image: ghcr.io/rmaneschy/ms-condohome-notification:${TAG:-latest}
+    container_name: condohome-notification
+    build:
+      context: ${NOTIFICATION_BUILD_CONTEXT:-../../../ms-condohome-notification}
+      dockerfile: Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${POSTGRES_HOST:-postgres}:5432/condohome_notification
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-condohome}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-condohome123}
+      # Email SMTP
+      SPRING_MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      SPRING_MAIL_PORT: ${MAIL_PORT:-587}
+      SPRING_MAIL_USERNAME: ${MAIL_USERNAME:-}
+      SPRING_MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      # WhatsApp Evolution API
+      WHATSAPP_EVOLUTION_API_URL: ${EVOLUTION_API_URL:-}
+      WHATSAPP_EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-}
+      WHATSAPP_EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE:-}
+      # Firebase
+      FIREBASE_CREDENTIALS_PATH: ${FIREBASE_CREDENTIALS_PATH:-}
+      SERVER_PORT: 8086
+    ports:
+      - "${NOTIFICATION_PORT:-8086}:8086"
+    networks:
+      - condohome-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+networks:
+  condohome-net:
+    external: true
+    name: condohome-net

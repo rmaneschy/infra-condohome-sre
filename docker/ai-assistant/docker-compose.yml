@@ -1,0 +1,45 @@
+##
+## CondoHome - AI Assistant Domain
+## Classificação de intenção, RAG, guardrails
+##
+
+version: '3.8'
+
+services:
+  ai-assistant:
+    image: ghcr.io/rmaneschy/ms-condohome-ai-assistant:${TAG:-latest}
+    container_name: condohome-ai-assistant
+    build:
+      context: ${AI_ASSISTANT_BUILD_CONTEXT:-../../../ms-condohome-ai-assistant}
+      dockerfile: Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${POSTGRES_HOST:-postgres}:5432/condohome_ai
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-condohome}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-condohome123}
+      SPRING_DATA_REDIS_HOST: ${REDIS_HOST:-redis}
+      SPRING_DATA_REDIS_PORT: ${REDIS_PORT:-6379}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      SERVER_PORT: 8085
+    ports:
+      - "${AI_ASSISTANT_PORT:-8085}:8085"
+    networks:
+      - condohome-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+networks:
+  condohome-net:
+    external: true
+    name: condohome-net

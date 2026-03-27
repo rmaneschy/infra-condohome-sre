@@ -1,0 +1,41 @@
+##
+## CondoHome - Billing Domain
+## Cobranças, taxas, conciliação, integração Asaas
+##
+
+version: '3.8'
+
+services:
+  billing:
+    image: ghcr.io/rmaneschy/ms-condohome-billing:${TAG:-latest}
+    container_name: condohome-billing
+    build:
+      context: ${BILLING_BUILD_CONTEXT:-../../../ms-condohome-billing}
+      dockerfile: Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${POSTGRES_HOST:-postgres}:5432/condohome_billing
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-condohome}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-condohome123}
+      ASAAS_API_KEY: ${ASAAS_API_KEY:-}
+      ASAAS_ENVIRONMENT: ${ASAAS_ENVIRONMENT:-sandbox}
+      SERVER_PORT: 8082
+    ports:
+      - "${BILLING_PORT:-8082}:8082"
+    networks:
+      - condohome-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+networks:
+  condohome-net:
+    external: true
+    name: condohome-net

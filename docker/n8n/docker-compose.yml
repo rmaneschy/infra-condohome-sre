@@ -1,0 +1,46 @@
+##
+## CondoHome - N8N Workflow Orchestration
+## Orquestração de fluxos entre microserviços
+##
+
+version: '3.8'
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: condohome-n8n
+    environment:
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_USER: ${N8N_USER:-admin}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_PASSWORD:-admin123}
+      N8N_HOST: ${N8N_HOST:-localhost}
+      N8N_PORT: 5678
+      N8N_PROTOCOL: ${N8N_PROTOCOL:-http}
+      WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://localhost:5678/}
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: ${POSTGRES_HOST:-postgres}
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: ${N8N_DB:-condohome_n8n}
+      DB_POSTGRESDB_USER: ${POSTGRES_USER:-condohome}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-condohome123}
+      GENERIC_TIMEZONE: America/Sao_Paulo
+      N8N_CUSTOM_EXTENSIONS: /home/node/.n8n/custom
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ${N8N_CUSTOM_NODES_PATH:-../../../n8n-nodes-condohome}:/home/node/.n8n/custom/n8n-nodes-condohome
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    networks:
+      - condohome-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  n8n_data:
+
+networks:
+  condohome-net:
+    external: true
+    name: condohome-net

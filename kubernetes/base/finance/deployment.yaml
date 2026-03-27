@@ -1,0 +1,70 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: finance
+  namespace: condohome
+  labels:
+    app: finance
+    tier: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: finance
+  template:
+    metadata:
+      labels:
+        app: finance
+        tier: backend
+    spec:
+      containers:
+        - name: finance
+          image: ghcr.io/rmaneschy/ms-condohome-finance:latest
+          ports:
+            - containerPort: 8088
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgres:5432/condohome_finance
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: condohome-db-secret
+                  key: username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: condohome-db-secret
+                  key: password
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8088
+            initialDelaySeconds: 90
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8088
+            initialDelaySeconds: 30
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: finance
+  namespace: condohome
+spec:
+  selector:
+    app: finance
+  ports:
+    - port: 8088
+      targetPort: 8088
+  type: ClusterIP

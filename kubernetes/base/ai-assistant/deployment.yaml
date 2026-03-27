@@ -1,0 +1,79 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-assistant
+  namespace: condohome
+  labels:
+    app: ai-assistant
+    tier: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-assistant
+  template:
+    metadata:
+      labels:
+        app: ai-assistant
+        tier: backend
+    spec:
+      containers:
+        - name: ai-assistant
+          image: ghcr.io/rmaneschy/ms-condohome-ai-assistant:latest
+          ports:
+            - containerPort: 8085
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgres:5432/condohome_ai
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: condohome-db-secret
+                  key: username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: condohome-db-secret
+                  key: password
+            - name: SPRING_DATA_REDIS_HOST
+              value: redis
+            - name: SPRING_DATA_REDIS_PORT
+              value: "6379"
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: condohome-api-secrets
+                  key: openai-api-key
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8085
+            initialDelaySeconds: 90
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8085
+            initialDelaySeconds: 30
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-assistant
+  namespace: condohome
+spec:
+  selector:
+    app: ai-assistant
+  ports:
+    - port: 8085
+      targetPort: 8085
+  type: ClusterIP

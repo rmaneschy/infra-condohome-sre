@@ -1,0 +1,109 @@
+##
+## CondoHome Platform - Shared Infrastructure
+## PostgreSQL, Redis, Monitoring
+##
+
+version: '3.8'
+
+services:
+  # =====================================================
+  # PostgreSQL 16 - Banco de dados compartilhado
+  # =====================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: condohome-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-condohome}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-condohome123}
+      POSTGRES_MULTIPLE_DATABASES: >-
+        condohome_register,
+        condohome_billing,
+        condohome_documents,
+        condohome_booking,
+        condohome_notification,
+        condohome_finance,
+        condohome_ai
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - condohome-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-condohome}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # =====================================================
+  # Redis 7 - Cache e Rate Limiting
+  # =====================================================
+  redis:
+    image: redis:7-alpine
+    container_name: condohome-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - condohome-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # =====================================================
+  # pgAdmin 4 - Administração do PostgreSQL
+  # =====================================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: condohome-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@condohome.com.br}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin123}
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    networks:
+      - condohome-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - tools
+
+  # =====================================================
+  # Redis Commander - Administração do Redis
+  # =====================================================
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: condohome-redis-commander
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "${REDIS_COMMANDER_PORT:-8090}:8081"
+    networks:
+      - condohome-net
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - tools
+
+volumes:
+  postgres_data:
+  redis_data:
+  pgadmin_data:
+
+networks:
+  condohome-net:
+    driver: bridge
+    name: condohome-net

@@ -1,0 +1,75 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: billing
+  namespace: condohome
+  labels:
+    app: billing
+    tier: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: billing
+  template:
+    metadata:
+      labels:
+        app: billing
+        tier: backend
+    spec:
+      containers:
+        - name: billing
+          image: ghcr.io/rmaneschy/ms-condohome-billing:latest
+          ports:
+            - containerPort: 8082
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgres:5432/condohome_billing
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: condohome-db-secret
+                  key: username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: condohome-db-secret
+                  key: password
+            - name: ASAAS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: condohome-api-secrets
+                  key: asaas-api-key
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8082
+            initialDelaySeconds: 90
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8082
+            initialDelaySeconds: 30
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: billing
+  namespace: condohome
+spec:
+  selector:
+    app: billing
+  ports:
+    - port: 8082
+      targetPort: 8082
+  type: ClusterIP

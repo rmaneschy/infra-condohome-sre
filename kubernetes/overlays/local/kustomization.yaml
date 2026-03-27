@@ -1,0 +1,37 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: condohome
+
+resources:
+  - ../../base/shared
+  - ../../base/register
+  - ../../base/billing
+  - ../../base/documents
+  - ../../base/booking
+  - ../../base/notification
+  - ../../base/finance
+  - ../../base/ai-assistant
+  - ../../base/gateway
+  - ../../base/n8n
+
+patches:
+  # Reduzir recursos para ambiente local
+  - target:
+      kind: Deployment
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: "128Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: "100m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "256Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "250m"
+
+commonLabels:
+  environment: local
