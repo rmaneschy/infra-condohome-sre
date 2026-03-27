@@ -32,6 +32,8 @@ infra-condohome-sre/
 │   ├── booking/                  # ms-condohome-booking (:8087)
 │   ├── finance/                  # ms-condohome-finance (:8088)
 │   ├── gateway/                  # ms-condohome-gateway (:8080)
+│   ├── portal-web/               # portal-condohome-web (:3000)
+│   ├── assistente-portaria/      # assistente-portaria (:3001)
 │   └── n8n/                      # N8N (:5678)
 ├── kubernetes/                   # Manifestos Kubernetes
 │   ├── base/                     # Recursos base por domínio
@@ -44,6 +46,8 @@ infra-condohome-sre/
 │   │   ├── finance/
 │   │   ├── ai-assistant/
 │   │   ├── gateway/              # + Ingress
+│   │   ├── portal-web/           # + Ingress (condohome.com.br)
+│   │   ├── assistente-portaria/  # + Ingress (portaria.condohome.com.br)
 │   │   └── n8n/
 │   └── overlays/                 # Customizações por ambiente
 │       ├── local/                # Replicas: 1, resources mínimos
@@ -84,19 +88,22 @@ make tools
 # 3. Subir infra + todos os microserviços
 make backend
 
-# 4. Subir tudo (infra + backend + N8N)
+# 4. Subir infra + gateway + frontends
+make frontend
+
+# 5. Subir tudo (infra + backend + frontend + N8N)
 make full
 
-# 5. Verificar status
+# 6. Verificar status
 make status
 
-# 6. Ver logs de um serviço
+# 7. Ver logs de um serviço
 make logs SERVICE=register
 
-# 7. Parar tudo
+# 8. Parar tudo
 make stop
 
-# 8. Reset total (remove volumes)
+# 9. Reset total (remove volumes)
 make clean
 ```
 
@@ -228,6 +235,8 @@ make provision-azure-aks     # AKS (Kubernetes gerenciado)
 | Notification | 8086 | Notificações |
 | Booking | 8087 | Reservas |
 | Finance | 8088 | Financeiro |
+| **Portal Web** | **3000** | **Frontend Admin** |
+| **Assistente Portaria** | **3001** | **Frontend Portaria** |
 | PostgreSQL | 5432 | Banco de dados |
 | Redis | 6379 | Cache |
 | N8N | 5678 | Orquestração |
@@ -245,6 +254,7 @@ make help                    # Lista todos os comandos disponíveis
 make infra                   # Subir PostgreSQL + Redis
 make tools                   # Subir infra + ferramentas
 make backend                 # Subir infra + microserviços
+make frontend                # Subir infra + gateway + frontends
 make full                    # Subir tudo
 make stop                    # Parar containers
 make status                  # Status dos containers

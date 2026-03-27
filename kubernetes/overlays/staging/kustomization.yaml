@@ -13,6 +13,8 @@ resources:
   - ../../base/finance
   - ../../base/ai-assistant
   - ../../base/gateway
+  - ../../base/portal-web
+  - ../../base/assistente-portaria
   - ../../base/n8n
 
 images:
@@ -31,6 +33,10 @@ images:
   - name: ghcr.io/rmaneschy/ms-condohome-ai-assistant
     newTag: staging
   - name: ghcr.io/rmaneschy/ms-condohome-gateway
+    newTag: staging
+  - name: ghcr.io/rmaneschy/portal-condohome-web
+    newTag: staging
+  - name: ghcr.io/rmaneschy/assistente-portaria
     newTag: staging
 
 commonLabels:

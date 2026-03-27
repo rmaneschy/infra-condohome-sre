@@ -24,7 +24,8 @@ usage() {
     echo "  infra       Subir apenas infraestrutura (PostgreSQL, Redis)"
     echo "  tools       Subir infra + ferramentas (pgAdmin, Redis Commander)"
     echo "  backend     Subir infra + todos os microserviços backend"
-    echo "  full        Subir tudo (infra + backend + N8N)"
+    echo "  frontend    Subir infra + gateway + frontends (portal-web, portaria)"
+    echo "  full        Subir tudo (infra + backend + frontend + N8N)"
     echo "  service     Subir infra + um serviço específico"
     echo "  stop        Parar todos os containers"
     echo "  status      Verificar status dos containers"
@@ -76,6 +77,18 @@ start_backend() {
     docker compose --profile backend up -d
     echo -e "${GREEN}Backend iniciado!${NC}"
     print_services
+}
+
+start_frontend() {
+    start_infra
+    echo -e "${BLUE}Iniciando frontend (gateway + portal-web + assistente-portaria)...${NC}"
+    cd "$SRE_DIR"
+    docker compose up -d gateway
+    docker compose --profile frontend up -d
+    echo -e "${GREEN}Frontend iniciado!${NC}"
+    echo -e "  Gateway:             http://localhost:${GATEWAY_PORT:-8080}"
+    echo -e "  Portal Web (Admin):  http://localhost:${PORTAL_WEB_PORT:-3000}"
+    echo -e "  Assistente Portaria: http://localhost:${PORTARIA_PORT:-3001}"
 }
 
 start_full() {
@@ -145,6 +158,10 @@ print_services() {
     echo -e "  Booking:       http://localhost:${BOOKING_PORT:-8087}"
     echo -e "  Finance:       http://localhost:${FINANCE_PORT:-8088}"
     echo -e "  N8N:           http://localhost:${N8N_PORT:-5678}"
+    echo ""
+    echo -e "${BLUE}Frontend:${NC}"
+    echo -e "  Portal Web:    http://localhost:${PORTAL_WEB_PORT:-3000}"
+    echo -e "  Portaria:      http://localhost:${PORTARIA_PORT:-3001}"
 }
 
 # Main
@@ -154,6 +171,7 @@ case "${1:-}" in
     infra)    start_infra ;;
     tools)    start_tools ;;
     backend)  start_backend ;;
+    frontend) start_frontend ;;
     full)     start_full ;;
     service)  start_service "$2" ;;
     stop)     stop_all ;;

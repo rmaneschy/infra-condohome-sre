@@ -3,7 +3,7 @@
 # Atalhos para comandos comuns de infraestrutura
 # =====================================================
 
-.PHONY: help infra tools backend full stop status logs clean build
+.PHONY: help infra tools backend frontend full stop status logs clean build
 
 help: ## Exibir ajuda
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -21,7 +21,10 @@ tools: ## Subir infra + ferramentas (pgAdmin, Redis Commander)
 backend: ## Subir infra + todos os microserviços
 	@bash scripts/local/start.sh backend
 
-full: ## Subir tudo (infra + backend + N8N)
+frontend: ## Subir infra + gateway + frontends (portal-web, portaria)
+	@bash scripts/local/start.sh frontend
+
+full: ## Subir tudo (infra + backend + frontend + N8N)
 	@bash scripts/local/start.sh full
 
 stop: ## Parar todos os containers

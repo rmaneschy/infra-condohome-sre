@@ -1,0 +1,36 @@
+##
+## CondoHome - Assistente Portaria (Frontend)
+## Vite + React 19 + TypeScript + Tailwind + Shadcn UI
+## Layout simplificado: lista de unidades como card buttons
+## Porta: 3001
+##
+
+services:
+  assistente-portaria:
+    image: ghcr.io/rmaneschy/assistente-portaria:${TAG:-latest}
+    container_name: condohome-assistente-portaria
+    build:
+      context: ${PORTARIA_BUILD_CONTEXT:-../../../assistente-portaria}
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
+        VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:8080}
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+    ports:
+      - "${PORTARIA_PORT:-3001}:80"
+    networks:
+      - condohome-net
+    depends_on:
+      - gateway
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  condohome-net:
+    external: true
+    name: condohome-net

@@ -13,12 +13,18 @@ resources:
   - ../../base/finance
   - ../../base/ai-assistant
   - ../../base/gateway
+  - ../../base/portal-web
+  - ../../base/assistente-portaria
   - ../../base/n8n
 
 replicas:
   - name: gateway
     count: 2
   - name: register
+    count: 2
+  - name: portal-web
+    count: 2
+  - name: assistente-portaria
     count: 2
 
 images:
@@ -37,6 +43,10 @@ images:
   - name: ghcr.io/rmaneschy/ms-condohome-ai-assistant
     newTag: latest
   - name: ghcr.io/rmaneschy/ms-condohome-gateway
+    newTag: latest
+  - name: ghcr.io/rmaneschy/portal-condohome-web
+    newTag: latest
+  - name: ghcr.io/rmaneschy/assistente-portaria
     newTag: latest
 
 patches:

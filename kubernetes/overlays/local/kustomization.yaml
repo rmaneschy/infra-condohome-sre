@@ -13,6 +13,8 @@ resources:
   - ../../base/finance
   - ../../base/ai-assistant
   - ../../base/gateway
+  - ../../base/portal-web
+  - ../../base/assistente-portaria
   - ../../base/n8n
 
 patches:
