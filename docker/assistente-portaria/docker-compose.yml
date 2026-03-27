@@ -1,0 +1,39 @@
+##
+## CondoHome - Assistente Portaria
+## Python 3.11 + n8n + WhatsApp + PostgreSQL + IA/LLM
+## Porta: 3001
+##
+
+services:
+  assistente-portaria:
+    image: ghcr.io/rmaneschy/assistente-portaria:${TAG:-latest}
+    container_name: condohome-assistente-portaria
+    build:
+      context: ${PORTARIA_BUILD_CONTEXT:-../../../assistente-portaria}
+      dockerfile: Dockerfile
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+      DATABASE_URL: ${PORTARIA_DATABASE_URL:-postgresql://condohome:condohome@postgres:5432/condohome_register}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/2}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://n8n:5678}
+      API_GATEWAY_URL: ${API_GATEWAY_URL:-http://gateway:8080}
+    ports:
+      - "${PORTARIA_PORT:-3001}:8000"
+    networks:
+      - condohome-net
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  condohome-net:
+    external: true
+    name: condohome-net
