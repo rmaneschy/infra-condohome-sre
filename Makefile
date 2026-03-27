@@ -1,9 +1,9 @@
 # =====================================================
-# CondoHome Platform - Makefile
+# CondoHome Platform - SRE Makefile
 # Atalhos para comandos comuns de infraestrutura
 # =====================================================
 
-.PHONY: help infra tools backend full stop status logs clean build secrets-validate k8s-local k8s-staging k8s-prod
+.PHONY: help infra tools backend full stop status logs clean build
 
 help: ## Exibir ajuda
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -44,16 +44,28 @@ build: ## Compilar todos os microserviços
 	@bash scripts/local/build-all.sh
 
 # =====================================================
-# Secrets
+# Secrets - GitHub Environments
 # =====================================================
 
-secrets-validate: ## Validar secrets (uso: make secrets-validate ENV=local)
-	@bash scripts/secrets/manage-secrets.sh validate configs/envs/.env.$(ENV)
+secrets-validate: ## Validar secrets (uso: make secrets-validate FILE=path/to/secrets)
+	@bash scripts/secrets/manage-secrets.sh validate $(FILE)
 
-secrets-github: ## Configurar GitHub Secrets (uso: make secrets-github ENV=production)
-	@bash scripts/secrets/manage-secrets.sh github-set configs/envs/.env.$(ENV)
+secrets-env-set: ## Definir Environment Secrets (uso: make secrets-env-set ENV=staging FILE=path/to/secrets)
+	@bash scripts/secrets/manage-secrets.sh env-set $(ENV) $(FILE)
 
-secrets-template: ## Gerar template de variáveis
+secrets-env-list: ## Listar Environment Secrets (uso: make secrets-env-list ENV=staging)
+	@bash scripts/secrets/manage-secrets.sh env-list $(ENV)
+
+secrets-repo-set: ## Definir Repository Secrets globais (uso: make secrets-repo-set FILE=path/to/secrets)
+	@bash scripts/secrets/manage-secrets.sh repo-set $(FILE)
+
+secrets-repo-list: ## Listar Repository Secrets globais
+	@bash scripts/secrets/manage-secrets.sh repo-list
+
+secrets-audit: ## Auditar secrets em todos os repos e environments
+	@bash scripts/secrets/manage-secrets.sh audit
+
+secrets-template: ## Gerar template de secrets
 	@bash scripts/secrets/manage-secrets.sh template
 
 # =====================================================
@@ -68,6 +80,9 @@ k8s-staging: ## Deploy no Kubernetes staging
 
 k8s-prod: ## Deploy no Kubernetes production
 	kubectl apply -k kubernetes/overlays/production
+
+k8s-secrets: ## Criar K8s secrets (uso: make k8s-secrets ENV=staging FILE=path/to/secrets)
+	@bash scripts/secrets/manage-secrets.sh k8s-create $(ENV) $(FILE)
 
 k8s-status: ## Status dos pods no Kubernetes
 	kubectl get pods -n condohome -o wide

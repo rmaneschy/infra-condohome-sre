@@ -1,108 +1,280 @@
-# CondoHome Platform - SRE & Infrastructure
+# infra-condohome-sre
 
-Este repositório centraliza toda a infraestrutura, provisionamento e orquestração da plataforma **CondoHome**. Ele foi desenhado para simplificar o desenvolvimento local e padronizar o deploy em ambientes de nuvem (Hostinger, DigitalOcean, Azure).
+Infraestrutura e operações da plataforma **CondoHome**. Centraliza Docker Compose, Kubernetes manifests, scripts de provisionamento e gestão de secrets integrada com **GitHub Environments**.
+
+**Desenvolvido por:** Debug Software
+
+---
+
+## Visão Geral
+
+Este repositório fornece toda a infraestrutura necessária para rodar a plataforma CondoHome em 3 cenários:
+
+| Cenário | Ferramenta | Uso |
+|---|---|---|
+| **Desenvolvimento Local** | Docker Compose | Desenvolvedor sobe tudo com `make full` |
+| **Kubernetes** | Kustomize (base + overlays) | Deploy em cluster K8s (local, staging, prod) |
+| **Cloud VPS** | Scripts de provisionamento | Hostinger, DigitalOcean, Azure |
+
+---
 
 ## Estrutura do Repositório
 
-A infraestrutura está organizada por domínios e ferramentas:
-
-| Diretório | Descrição |
-|---|---|
-| `docker/` | Configurações do Docker Compose separadas por microserviço e infra compartilhada |
-| `kubernetes/` | Manifestos Kustomize (base e overlays para local, staging, production) |
-| `scripts/` | Scripts de automação para dev local, cloud provisioning e secrets |
-| `configs/` | Templates de variáveis de ambiente (`.env`) e configurações do Nginx |
-| `Makefile` | Atalhos rápidos para os comandos mais utilizados |
-
-## Desenvolvimento Local
-
-O ambiente local utiliza Docker Compose com profiles para permitir subir apenas o necessário.
-
-### Pré-requisitos
-- Docker e Docker Compose
-- Java 21 e Maven (para compilar os serviços)
-- Make (opcional, mas recomendado)
-
-### Configuração Inicial
-
-1. Copie o template de variáveis de ambiente:
-   ```bash
-   cp configs/envs/.env.local .env.local
-   ```
-2. (Opcional) Edite o `.env.local` com suas chaves de API (Asaas, OpenAI, etc).
-
-### Comandos Principais (via Makefile)
-
-| Comando | Ação |
-|---|---|
-| `make infra` | Sobe apenas PostgreSQL e Redis |
-| `make tools` | Sobe infra + pgAdmin e Redis Commander |
-| `make backend` | Sobe infra + todos os microserviços Spring Boot |
-| `make full` | Sobe a plataforma completa (incluindo N8N) |
-| `make stop` | Para todos os containers |
-| `make clean` | Para tudo e **remove os volumes** (bancos de dados) |
-| `make build` | Compila todos os microserviços localmente |
-
-*Alternativa sem Make:* Você pode usar diretamente `./scripts/local/start.sh <comando>`.
-
-## Provisionamento em Nuvem (Cloud)
-
-O repositório inclui scripts automatizados para provisionar a infraestrutura em diferentes provedores.
-
-### Hostinger (VPS)
-Provisiona uma VPS Ubuntu com Docker, Nginx e Certbot.
-```bash
-./scripts/cloud/hostinger/provision.sh
 ```
-
-### DigitalOcean
-Suporta tanto Droplets (VPS) quanto DOKS (Kubernetes Gerenciado).
-```bash
-./scripts/cloud/digitalocean/provision.sh droplet
-./scripts/cloud/digitalocean/provision.sh kubernetes
-```
-
-### Azure
-Suporta Máquinas Virtuais, AKS (Kubernetes) e ACR (Container Registry).
-```bash
-./scripts/cloud/azure/provision.sh vm
-./scripts/cloud/azure/provision.sh aks
-```
-
-## Kubernetes
-
-A arquitetura Kubernetes utiliza **Kustomize** para gerenciar múltiplos ambientes sem duplicação de código.
-
-- **Base:** Manifestos comuns a todos os ambientes (`kubernetes/base/`)
-- **Overlays:** Configurações específicas por ambiente (`kubernetes/overlays/`)
-  - `local`: Recursos reduzidos para testes (Minikube/Kind)
-  - `staging`: Tags de imagem `staging`, réplicas simples
-  - `production`: Alta disponibilidade, limites de recursos maiores
-
-### Deploy
-
-```bash
-# Deploy em ambiente local
-make k8s-local
-
-# Deploy em produção
-make k8s-prod
-```
-
-## Gestão de Secrets
-
-Nunca commite arquivos `.env` com credenciais reais. Utilize o gerenciador de secrets incluído:
-
-```bash
-# Validar se todas as secrets estão preenchidas no arquivo
-make secrets-validate ENV=production
-
-# Sincronizar secrets do .env para os repositórios no GitHub (requer GitHub CLI)
-make secrets-github ENV=production
-
-# Criar secrets no cluster Kubernetes a partir do .env
-./scripts/secrets/manage-secrets.sh k8s-create production configs/envs/.env.production
+infra-condohome-sre/
+├── docker/                       # Docker Compose por domínio
+│   ├── shared/                   # PostgreSQL + Redis + init scripts
+│   ├── register/                 # ms-condohome-register (:8081)
+│   ├── billing/                  # ms-condohome-billing (:8082)
+│   ├── documents/                # ms-condohome-documents (:8083)
+│   ├── ai-assistant/             # ms-condohome-ai-assistant (:8085)
+│   ├── notification/             # ms-condohome-notification (:8086)
+│   ├── booking/                  # ms-condohome-booking (:8087)
+│   ├── finance/                  # ms-condohome-finance (:8088)
+│   ├── gateway/                  # ms-condohome-gateway (:8080)
+│   └── n8n/                      # N8N (:5678)
+├── kubernetes/                   # Manifestos Kubernetes
+│   ├── base/                     # Recursos base por domínio
+│   │   ├── shared/               # Namespace, PostgreSQL, Redis, Secrets
+│   │   ├── register/             # Deployment + Service
+│   │   ├── billing/
+│   │   ├── documents/
+│   │   ├── booking/
+│   │   ├── notification/
+│   │   ├── finance/
+│   │   ├── ai-assistant/
+│   │   ├── gateway/              # + Ingress
+│   │   └── n8n/
+│   └── overlays/                 # Customizações por ambiente
+│       ├── local/                # Replicas: 1, resources mínimos
+│       ├── staging/              # Replicas: 1-2, resources médios
+│       └── production/           # Replicas: 2-3, resources altos
+├── configs/
+│   ├── envs/
+│   │   ├── .env.local            # Variáveis para dev local
+│   │   ├── .env.staging          # Variáveis para staging
+│   │   └── .env.production       # Variáveis para production
+│   └── nginx/
+│       └── condohome.conf        # Reverse proxy para produção
+├── scripts/
+│   ├── local/
+│   │   ├── start.sh              # Gerenciar ambiente local
+│   │   └── build-all.sh          # Compilar todos os microserviços
+│   ├── secrets/
+│   │   └── manage-secrets.sh     # Gestão de secrets (GitHub Envs + K8s)
+│   └── cloud/
+│       ├── hostinger/provision.sh
+│       ├── digitalocean/provision.sh
+│       └── azure/provision.sh
+├── docker-compose.yml            # Master compose (orquestra tudo)
+└── Makefile                      # Atalhos rápidos
 ```
 
 ---
-*Desenvolvido por Debug Software*
+
+## Quick Start - Desenvolvimento Local
+
+```bash
+# 1. Subir apenas infraestrutura (PostgreSQL + Redis)
+make infra
+
+# 2. Subir infra + ferramentas (pgAdmin, Redis Commander)
+make tools
+
+# 3. Subir infra + todos os microserviços
+make backend
+
+# 4. Subir tudo (infra + backend + N8N)
+make full
+
+# 5. Verificar status
+make status
+
+# 6. Ver logs de um serviço
+make logs SERVICE=register
+
+# 7. Parar tudo
+make stop
+
+# 8. Reset total (remove volumes)
+make clean
+```
+
+---
+
+## Gestão de Secrets com GitHub Environments
+
+A gestão de secrets está integrada com o sistema de **GitHub Environments** do repositório `infra-condohome-cicd`.
+
+### Hierarquia de Secrets (GitHub)
+
+```
+┌─────────────────────────────────────────────┐
+│  Organization Secrets (compartilhados)      │  ← Menor prioridade
+├─────────────────────────────────────────────┤
+│  Repository Secrets (por repo)              │
+├─────────────────────────────────────────────┤
+│  Environment Secrets (por ambiente)         │  ← Maior prioridade
+└─────────────────────────────────────────────┘
+```
+
+### Comandos de Secrets
+
+```bash
+# Definir secrets em um GitHub Environment
+make secrets-env-set ENV=staging FILE=path/to/staging.secrets
+
+# Listar secrets de um Environment
+make secrets-env-list ENV=production
+
+# Definir secrets globais (Repository level)
+make secrets-repo-set FILE=path/to/global.secrets
+
+# Listar secrets globais
+make secrets-repo-list
+
+# Auditar secrets em todos os repos e environments
+make secrets-audit
+
+# Validar se um arquivo de secrets está completo
+make secrets-validate FILE=path/to/secrets
+
+# Gerar template de secrets
+make secrets-template
+
+# Criar Kubernetes secrets a partir de arquivo
+make k8s-secrets ENV=staging FILE=path/to/staging.secrets
+```
+
+### Boas Práticas de Secrets
+
+1. **Environment Secrets** para credenciais que variam por ambiente (DB_PASSWORD, API keys)
+2. **Repository Secrets** apenas para valores compartilhados entre ambientes
+3. **Nunca commitar** arquivos `.secrets` no repositório
+4. **Rotacionar** credenciais a cada 90 dias
+5. **Auditar** regularmente com `make secrets-audit`
+
+---
+
+## Kubernetes
+
+### Deploy por ambiente
+
+```bash
+# Local (minikube/kind)
+make k8s-local
+
+# Staging
+make k8s-staging
+
+# Production
+make k8s-prod
+
+# Criar secrets no K8s
+make k8s-secrets ENV=staging FILE=configs/envs/staging.secrets
+
+# Status
+make k8s-status
+
+# Logs
+make k8s-logs POD=register
+```
+
+### Overlays
+
+| Overlay | Replicas | CPU Request | Memory Request |
+|---|---|---|---|
+| `local` | 1 | 100m | 256Mi |
+| `staging` | 1-2 | 250m | 512Mi |
+| `production` | 2-3 | 500m | 1Gi |
+
+---
+
+## Cloud Provisioning
+
+### Hostinger VPS
+
+```bash
+make provision-hostinger
+```
+
+Instala Docker, Docker Compose, configura firewall, Nginx reverse proxy e SSL com Let's Encrypt.
+
+### DigitalOcean
+
+```bash
+make provision-do-droplet    # Droplet (VPS)
+make provision-do-k8s        # DOKS (Kubernetes gerenciado)
+```
+
+### Azure
+
+```bash
+make provision-azure-vm      # VM com Docker
+make provision-azure-aks     # AKS (Kubernetes gerenciado)
+```
+
+---
+
+## Portas dos Serviços
+
+| Serviço | Porta | Descrição |
+|---|---|---|
+| Gateway | 8080 | Ponto de entrada único |
+| Register | 8081 | Cadastros |
+| Billing | 8082 | Cobranças |
+| Documents | 8083 | Documentos |
+| AI Assistant | 8085 | Assistente IA |
+| Notification | 8086 | Notificações |
+| Booking | 8087 | Reservas |
+| Finance | 8088 | Financeiro |
+| PostgreSQL | 5432 | Banco de dados |
+| Redis | 6379 | Cache |
+| N8N | 5678 | Orquestração |
+| pgAdmin | 5050 | Admin DB (dev) |
+| Redis Commander | 8090 | Admin Redis (dev) |
+
+---
+
+## Todos os Comandos
+
+```bash
+make help                    # Lista todos os comandos disponíveis
+
+# Docker Compose
+make infra                   # Subir PostgreSQL + Redis
+make tools                   # Subir infra + ferramentas
+make backend                 # Subir infra + microserviços
+make full                    # Subir tudo
+make stop                    # Parar containers
+make status                  # Status dos containers
+make logs SERVICE=register   # Ver logs
+make clean                   # Reset total
+
+# Build
+make build                   # Compilar todos os microserviços
+
+# Secrets (GitHub Environments)
+make secrets-env-set         # Definir Environment Secrets
+make secrets-env-list        # Listar Environment Secrets
+make secrets-repo-set        # Definir Repository Secrets
+make secrets-repo-list       # Listar Repository Secrets
+make secrets-audit           # Auditar todos os secrets
+make secrets-validate        # Validar arquivo de secrets
+make secrets-template        # Gerar template
+
+# Kubernetes
+make k8s-local               # Deploy local
+make k8s-staging             # Deploy staging
+make k8s-prod                # Deploy production
+make k8s-secrets             # Criar K8s secrets
+make k8s-status              # Status dos pods
+make k8s-logs POD=register   # Logs de um pod
+
+# Cloud
+make provision-hostinger     # Provisionar Hostinger VPS
+make provision-do-droplet    # Provisionar DigitalOcean Droplet
+make provision-do-k8s        # Provisionar DigitalOcean K8s
+make provision-azure-vm      # Provisionar Azure VM
+make provision-azure-aks     # Provisionar Azure AKS
+```
