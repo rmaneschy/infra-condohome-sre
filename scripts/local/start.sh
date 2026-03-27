@@ -18,23 +18,23 @@ NC='\033[0m'
 usage() {
     echo -e "${BLUE}CondoHome Platform - Local Environment Manager${NC}"
     echo ""
-    echo "Uso: $0 [OPÇÃO]"
+    echo "Uso: $0 [OPCAO]"
     echo ""
-    echo "Opções:"
+    echo "Opcoes:"
     echo "  infra       Subir apenas infraestrutura (PostgreSQL, Redis)"
     echo "  tools       Subir infra + ferramentas (pgAdmin, Redis Commander)"
-    echo "  backend     Subir infra + todos os microserviços backend"
+    echo "  backend     Subir infra + todos os microservicos backend"
     echo "  frontend    Subir infra + gateway + frontends (portal-web, portaria)"
     echo "  full        Subir tudo (infra + backend + frontend + N8N)"
-    echo "  service     Subir infra + um serviço específico"
+    echo "  service     Subir infra + um servico especifico"
     echo "  stop        Parar todos os containers"
     echo "  status      Verificar status dos containers"
-    echo "  logs        Ver logs de um serviço"
+    echo "  logs        Ver logs de um servico"
     echo "  clean       Parar e remover volumes (RESET TOTAL)"
     echo ""
     echo "Exemplos:"
     echo "  $0 infra                  # Apenas PostgreSQL e Redis"
-    echo "  $0 backend                # Infra + todos os serviços"
+    echo "  $0 backend                # Infra + todos os servicos"
     echo "  $0 service register       # Infra + ms-condohome-register"
     echo "  $0 logs billing           # Logs do ms-condohome-billing"
     echo ""
@@ -48,7 +48,7 @@ load_env() {
         set +a
         echo -e "${GREEN}Ambiente local carregado${NC}"
     else
-        echo -e "${YELLOW}Arquivo .env.local não encontrado. Usando valores padrão.${NC}"
+        echo -e "${YELLOW}Arquivo .env.local nao encontrado. Usando valores padrao.${NC}"
     fi
 }
 
@@ -102,14 +102,14 @@ start_full() {
 start_service() {
     local service="$1"
     if [ -z "$service" ]; then
-        echo -e "${RED}Especifique o serviço. Ex: $0 service register${NC}"
+        echo -e "${RED}Especifique o servico. Ex: $0 service register${NC}"
         exit 1
     fi
     start_infra
-    echo -e "${BLUE}Iniciando serviço: $service...${NC}"
+    echo -e "${BLUE}Iniciando servico: $service...${NC}"
     cd "$SRE_DIR"
     docker compose up -d "$service"
-    echo -e "${GREEN}Serviço $service iniciado!${NC}"
+    echo -e "${GREEN}Servico $service iniciado!${NC}"
 }
 
 stop_all() {
@@ -127,7 +127,7 @@ show_status() {
 show_logs() {
     local service="$1"
     if [ -z "$service" ]; then
-        echo -e "${RED}Especifique o serviço. Ex: $0 logs register${NC}"
+        echo -e "${RED}Especifique o servico. Ex: $0 logs register${NC}"
         exit 1
     fi
     cd "$SRE_DIR"
@@ -135,20 +135,20 @@ show_logs() {
 }
 
 clean_all() {
-    echo -e "${RED}ATENÇÃO: Isso irá remover TODOS os dados (volumes, bancos, etc.)${NC}"
+    echo -e "${RED}ATENCAO: Isso ira remover TODOS os dados (volumes, bancos, etc.)${NC}"
     read -p "Tem certeza? (y/N): " confirm
     if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
         cd "$SRE_DIR"
         docker compose --profile full --profile tools down -v
         echo -e "${GREEN}Ambiente limpo com sucesso.${NC}"
     else
-        echo -e "${YELLOW}Operação cancelada.${NC}"
+        echo -e "${YELLOW}Operacao cancelada.${NC}"
     fi
 }
 
 print_services() {
     echo ""
-    echo -e "${BLUE}Serviços disponíveis:${NC}"
+    echo -e "${BLUE}Servicos disponiveis:${NC}"
     echo -e "  Gateway:       http://localhost:${GATEWAY_PORT:-8080}"
     echo -e "  Register:      http://localhost:${REGISTER_PORT:-8081}"
     echo -e "  Billing:       http://localhost:${BILLING_PORT:-8082}"

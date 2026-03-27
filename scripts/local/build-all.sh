@@ -43,7 +43,7 @@ build_service() {
     local service_dir="$PLATFORM_DIR/$service"
 
     if [ ! -d "$service_dir" ]; then
-        echo -e "${YELLOW}[SKIP] $service - diretório não encontrado${NC}"
+        echo -e "${YELLOW}[SKIP] $service - diretorio nao encontrado${NC}"
         return 1
     fi
 
@@ -54,7 +54,7 @@ build_service() {
         mvn_args="$mvn_args -DskipTests"
     fi
 
-    if cd "$service_dir" && ./mvnw $mvn_args -q 2>&1; then
+    if cd "$service_dir" && bash ./mvnw $mvn_args -q 2>&1; then
         echo -e "${GREEN}[OK] $service${NC}"
         return 0
     else

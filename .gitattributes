@@ -1,0 +1,2 @@
+scripts/local/*.sh text eol=lf
+configs/envs/.env*.example text eol=lf

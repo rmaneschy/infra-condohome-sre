@@ -1,0 +1,2 @@
+configs/envs/.env*
+!configs/envs/.env*.example
