@@ -1,2 +1,40 @@
-scripts/local/*.sh text eol=lf
-configs/envs/.env*.example text eol=lf
+# Auto detect text files and ensure LF line endings
+* text=auto eol=lf
+
+# Explicitly declare text files
+*.sh text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+*.java text eol=lf
+*.gradle text eol=lf
+*.properties text eol=lf
+*.xml text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.sql text eol=lf
+*.graphql text eol=lf
+Makefile text eol=lf
+Dockerfile text eol=lf
+*.conf text eol=lf
+*.toml text eol=lf
+*.env text eol=lf
+*.bru text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.jar binary
+*.class binary
+*.zip binary
+*.tar.gz binary
+*.pdf binary
+
