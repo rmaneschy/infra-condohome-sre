@@ -2,12 +2,22 @@
 # =====================================================
 # CondoHome Platform - Kong Gateway Management
 # Start, stop, restart e health check do Kong
+#
+# Por padrao, usa o docker-compose.yml principal (condohome-platform)
+# para que o Kong fique na mesma rede dos microservicos.
+#
+# Para uso standalone (Kong isolado):
+#   KONG_STANDALONE=true bash scripts/kong/manage.sh start
 # =====================================================
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SRE_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
-KONG_COMPOSE="$SRE_DIR/docker/kong/docker-compose.yml"
+
+# Compose principal (Kong integrado com microservicos)
+MAIN_COMPOSE="$SRE_DIR/docker-compose.yml"
+# Compose standalone (Kong isolado)
+STANDALONE_COMPOSE="$SRE_DIR/docker/kong/docker-compose.yml"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -21,7 +31,7 @@ log_ok() { echo -e "${GREEN}[OK]${NC} $1"; }
 log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
-# Carregar variáveis de ambiente
+# Carregar variaveis de ambiente
 load_env() {
     local env_file="$SRE_DIR/configs/envs/.env.local"
     if [ -f "$env_file" ]; then
@@ -31,13 +41,23 @@ load_env() {
     fi
 }
 
-ensure_network() {
-    if ! docker network inspect condohome-net > /dev/null 2>&1; then
-        log_info "Criando rede condohome-net..."
-        docker network create condohome-net
-        log_ok "Rede condohome-net criada"
+# Determinar qual compose usar
+get_compose_cmd() {
+    if [ "${KONG_STANDALONE:-false}" = "true" ]; then
+        log_info "Modo standalone (Kong isolado)"
+        # Standalone precisa da rede externa
+        if ! docker network inspect condohome-net > /dev/null 2>&1; then
+            log_info "Criando rede condohome-net..."
+            docker network create condohome-net
+        fi
+        echo "docker compose -f $STANDALONE_COMPOSE"
+    else
+        echo "docker compose -f $MAIN_COMPOSE"
     fi
 }
+
+# Servicos Kong no compose principal (filtrar apenas Kong)
+KONG_SERVICES="kong-database kong-migrations kong"
 
 usage() {
     echo -e "${BLUE}CondoHome - Kong Gateway Management${NC}"
@@ -56,14 +76,24 @@ usage() {
     echo "  provision    Provisionar services, routes e plugins"
     echo "  quick-start  Start + provision (setup completo)"
     echo ""
+    echo "Variaveis de ambiente:"
+    echo "  KONG_STANDALONE=true   Usar compose standalone (Kong isolado)"
+    echo ""
 }
 
 start() {
     log_info "Iniciando Kong Gateway..."
     load_env
-    ensure_network
 
-    docker compose -f "$KONG_COMPOSE" up -d
+    local compose_cmd
+    compose_cmd=$(get_compose_cmd)
+
+    if [ "${KONG_STANDALONE:-false}" = "true" ]; then
+        $compose_cmd up -d
+    else
+        # No compose principal, subir apenas os servicos do Kong
+        $compose_cmd --profile backend up -d $KONG_SERVICES
+    fi
 
     log_info "Aguardando Kong ficar saudavel..."
     local retries=0
@@ -82,13 +112,24 @@ start() {
     done
     echo ""
     log_error "Kong nao ficou saudavel apos 60s"
-    docker compose -f "$KONG_COMPOSE" logs kong --tail 20
+    docker logs condohome-kong --tail 20
     exit 1
 }
 
 stop() {
     log_info "Parando Kong Gateway..."
-    docker compose -f "$KONG_COMPOSE" down
+    load_env
+
+    local compose_cmd
+    compose_cmd=$(get_compose_cmd)
+
+    if [ "${KONG_STANDALONE:-false}" = "true" ]; then
+        $compose_cmd down
+    else
+        # No compose principal, parar apenas os servicos do Kong
+        $compose_cmd stop $KONG_SERVICES
+        $compose_cmd rm -f $KONG_SERVICES
+    fi
     log_ok "Kong Gateway parado"
 }
 
@@ -99,7 +140,7 @@ restart() {
 
 status() {
     echo -e "${CYAN}Kong Gateway Containers:${NC}"
-    docker compose -f "$KONG_COMPOSE" ps
+    docker ps --filter "name=condohome-kong" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
     echo ""
     if curl -s "http://localhost:${KONG_ADMIN_PORT:-8001}/status" > /dev/null 2>&1; then
@@ -112,7 +153,7 @@ status() {
 
 logs() {
     local service="${1:-kong}"
-    docker compose -f "$KONG_COMPOSE" logs -f "$service"
+    docker logs -f "condohome-${service}" 2>/dev/null || docker logs -f "condohome-kong" 2>/dev/null
 }
 
 health() {
@@ -165,7 +206,19 @@ clean() {
         return 0
     fi
 
-    docker compose -f "$KONG_COMPOSE" down -v
+    load_env
+    local compose_cmd
+    compose_cmd=$(get_compose_cmd)
+
+    if [ "${KONG_STANDALONE:-false}" = "true" ]; then
+        $compose_cmd down -v
+    else
+        # Parar e remover containers Kong
+        docker stop condohome-kong condohome-kong-database condohome-kong-migrations 2>/dev/null || true
+        docker rm -f condohome-kong condohome-kong-database condohome-kong-migrations 2>/dev/null || true
+        # Remover volume do Kong
+        docker volume rm condohome-platform_kong_postgres_data 2>/dev/null || true
+    fi
     log_ok "Kong Gateway removido com volumes"
 }
 

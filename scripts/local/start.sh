@@ -149,6 +149,9 @@ clean_all() {
 print_services() {
     echo ""
     echo -e "${BLUE}Servicos disponiveis:${NC}"
+    echo -e "  Kong Proxy:    http://localhost:${KONG_PROXY_PORT:-8000}"
+    echo -e "  Kong Admin:    http://localhost:${KONG_ADMIN_PORT:-8001}"
+    echo -e "  Kong Manager:  http://localhost:${KONG_ADMIN_GUI_PORT:-8002}"
     echo -e "  Gateway:       http://localhost:${GATEWAY_PORT:-8080}"
     echo -e "  Register:      http://localhost:${REGISTER_PORT:-8081}"
     echo -e "  Billing:       http://localhost:${BILLING_PORT:-8082}"

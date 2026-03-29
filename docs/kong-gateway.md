@@ -34,17 +34,36 @@ O Kong Gateway atua como API Gateway centralizado da plataforma CondoHome, subst
 
 ## Quick Start
 
-### 1. Iniciar Kong (com provisionamento automatico)
+### 1. Iniciar Kong (integrado com microservicos)
+
+O Kong faz parte do `docker-compose.yml` principal (projeto `condohome-platform`), na mesma rede `condohome-net` dos microservicos. Isso permite que o Kong resolva os nomes dos containers diretamente.
 
 ```bash
+# Iniciar Kong + provisionar (recomendado)
 make kong-start
+
+# Ou subir tudo junto (infra + backend + Kong)
+make backend
+
+# Ou subir a plataforma completa
+make full
 ```
 
-Isso executa:
+O `make kong-start` executa:
 1. Sobe o PostgreSQL dedicado do Kong (porta 5433)
 2. Executa as migrations do Kong
 3. Inicia o Kong Gateway
 4. Provisiona services, routes, plugins e consumers
+
+### Modo Standalone (Kong isolado)
+
+Para testar o Kong sem subir os microservicos:
+
+```bash
+KONG_STANDALONE=true make kong-start
+```
+
+Isso usa o compose em `docker/kong/docker-compose.yml` com rede externa.
 
 ### 2. Verificar status
 
@@ -200,6 +219,16 @@ Este script verifica:
 - Kong Admin API
 - Kong Proxy
 - Cada microservico via proxy (actuator/health)
+
+## Integracao com Docker Compose
+
+O Kong esta definido no `docker-compose.yml` principal com os profiles `backend` e `full`:
+
+- `docker compose --profile backend up -d` sobe infra + Kong + microservicos
+- `docker compose --profile full up -d` sobe tudo (infra + Kong + backend + frontend + N8N)
+- `make kong-start` sobe apenas os 3 servicos do Kong (kong-database, kong-migrations, kong)
+
+Os servicos do Kong compartilham a rede `condohome-net` com todos os microservicos, permitindo que as rotas do Kong apontem para os container names (ex: `condohome-register:8081`).
 
 ## Producao
 

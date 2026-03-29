@@ -1,6 +1,17 @@
 ##
-## CondoHome - Kong API Gateway
-## API Gateway com rate limiting, autenticação, CORS, logging e circuit breaker
+## CondoHome - Kong API Gateway (Standalone)
+##
+## Uso STANDALONE (quando nao usar o compose principal):
+##   docker compose -f docker/kong/docker-compose.yml up -d
+##
+## RECOMENDADO: Usar o compose principal para integrar com os microservicos:
+##   docker compose --profile backend up -d
+##   (ou: make kong-start / make backend / make full)
+##
+## Este compose e util para:
+##   - Testar Kong isoladamente
+##   - Desenvolvimento do Kong sem subir microservicos
+##   - CI/CD pipelines que precisam apenas do Kong
 ##
 services:
   # =====================================================
