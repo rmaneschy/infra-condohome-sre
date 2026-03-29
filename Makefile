@@ -3,7 +3,9 @@
 # Atalhos para comandos comuns de infraestrutura
 # =====================================================
 
-.PHONY: help infra tools backend frontend full stop status logs clean build
+.PHONY: help infra tools backend frontend full stop status logs clean build \
+	kong-start kong-stop kong-restart kong-status kong-health kong-logs \
+	kong-provision kong-reset kong-export kong-shell kong-clean
 
 help: ## Exibir ajuda
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -70,6 +72,43 @@ secrets-audit: ## Auditar secrets em todos os repos e environments
 
 secrets-template: ## Gerar template de secrets
 	@bash scripts/secrets/manage-secrets.sh template
+
+# =====================================================
+# Kong API Gateway
+# =====================================================
+
+kong-start: ## Iniciar Kong Gateway + provisionar tudo
+	@bash scripts/kong/manage.sh quick-start
+
+kong-stop: ## Parar Kong Gateway
+	@bash scripts/kong/manage.sh stop
+
+kong-restart: ## Reiniciar Kong Gateway
+	@bash scripts/kong/manage.sh restart
+
+kong-status: ## Verificar status do Kong
+	@bash scripts/kong/manage.sh status
+
+kong-health: ## Health check do Kong e microservicos
+	@bash scripts/kong/healthcheck.sh
+
+kong-logs: ## Ver logs do Kong
+	@bash scripts/kong/manage.sh logs
+
+kong-provision: ## Re-provisionar services, routes e plugins
+	@bash scripts/kong/provision.sh all
+
+kong-reset: ## Remover TODAS as configuracoes do Kong
+	@bash scripts/kong/provision.sh reset
+
+kong-export: ## Exportar configuracao atual do Kong
+	@bash scripts/kong/provision.sh export
+
+kong-shell: ## Abrir shell no container do Kong
+	@bash scripts/kong/manage.sh shell
+
+kong-clean: ## Parar Kong e remover volumes (RESET TOTAL)
+	@bash scripts/kong/manage.sh clean
 
 # =====================================================
 # Kubernetes

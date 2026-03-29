@@ -1,0 +1,244 @@
+# =====================================================
+# CondoHome Platform - Kong Declarative Configuration
+# Alternativa DB-less: use com KONG_DATABASE=off
+# e KONG_DECLARATIVE_CONFIG=/etc/kong/kong.yml
+# =====================================================
+_format_version: "3.0"
+_transform: true
+
+# =====================================================
+# Services & Routes - Microserviços CondoHome
+# =====================================================
+
+services:
+  # --- Register Service ---
+  - name: register-service
+    url: http://condohome-register:8081
+    connect_timeout: 10000
+    write_timeout: 30000
+    read_timeout: 30000
+    retries: 3
+    routes:
+      - name: register-route
+        paths:
+          - /api/register
+        strip_path: false
+        preserve_host: false
+        protocols:
+          - http
+          - https
+
+  # --- Billing Service ---
+  - name: billing-service
+    url: http://condohome-billing:8082
+    connect_timeout: 10000
+    write_timeout: 30000
+    read_timeout: 30000
+    retries: 3
+    routes:
+      - name: billing-route
+        paths:
+          - /api/billing
+        strip_path: false
+        preserve_host: false
+        protocols:
+          - http
+          - https
+
+  # --- Documents Service ---
+  - name: documents-service
+    url: http://condohome-documents:8083
+    connect_timeout: 10000
+    write_timeout: 30000
+    read_timeout: 30000
+    retries: 3
+    routes:
+      - name: documents-route
+        paths:
+          - /api/documents
+        strip_path: false
+        preserve_host: false
+        protocols:
+          - http
+          - https
+
+  # --- AI Assistant Service ---
+  - name: ai-assistant-service
+    url: http://condohome-ai-assistant:8085
+    connect_timeout: 10000
+    write_timeout: 60000
+    read_timeout: 60000
+    retries: 2
+    routes:
+      - name: ai-assistant-route
+        paths:
+          - /api/ai
+        strip_path: false
+        preserve_host: false
+        protocols:
+          - http
+          - https
+
+  # --- Notification Service ---
+  - name: notification-service
+    url: http://condohome-notification:8086
+    connect_timeout: 10000
+    write_timeout: 30000
+    read_timeout: 30000
+    retries: 3
+    routes:
+      - name: notification-route
+        paths:
+          - /api/notification
+        strip_path: false
+        preserve_host: false
+        protocols:
+          - http
+          - https
+
+  # --- Booking Service ---
+  - name: booking-service
+    url: http://condohome-booking:8087
+    connect_timeout: 10000
+    write_timeout: 30000
+    read_timeout: 30000
+    retries: 3
+    routes:
+      - name: booking-route
+        paths:
+          - /api/booking
+        strip_path: false
+        preserve_host: false
+        protocols:
+          - http
+          - https
+
+  # --- Finance Service ---
+  - name: finance-service
+    url: http://condohome-finance:8088
+    connect_timeout: 10000
+    write_timeout: 30000
+    read_timeout: 30000
+    retries: 3
+    routes:
+      - name: finance-route
+        paths:
+          - /api/finance
+        strip_path: false
+        preserve_host: false
+        protocols:
+          - http
+          - https
+
+  # --- Gateway (Spring Cloud Gateway - legado/fallback) ---
+  - name: gateway-service
+    url: http://condohome-gateway:8080
+    connect_timeout: 10000
+    write_timeout: 30000
+    read_timeout: 30000
+    retries: 2
+    routes:
+      - name: gateway-health-route
+        paths:
+          - /actuator
+        strip_path: false
+        preserve_host: false
+        protocols:
+          - http
+          - https
+
+# =====================================================
+# Global Plugins
+# =====================================================
+plugins:
+  # --- CORS ---
+  - name: cors
+    config:
+      origins:
+        - http://localhost:3000
+        - http://localhost:5173
+        - https://condohome.com.br
+        - https://www.condohome.com.br
+        - https://portaria.condohome.com.br
+      methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+        - HEAD
+      headers:
+        - Accept
+        - Accept-Version
+        - Authorization
+        - Content-Length
+        - Content-Type
+        - X-Requested-With
+        - X-Condominium-Id
+        - X-Unit-Id
+      exposed_headers:
+        - X-Auth-Token
+        - X-Total-Count
+        - X-Page-Number
+        - X-Page-Size
+      credentials: true
+      max_age: 3600
+      preflight_continue: false
+
+  # --- Rate Limiting (global) ---
+  - name: rate-limiting
+    config:
+      minute: 120
+      hour: 3600
+      policy: local
+      fault_tolerant: true
+      hide_client_headers: false
+      error_code: 429
+      error_message: "Limite de requisicoes excedido. Tente novamente mais tarde."
+
+  # --- Request Size Limiting ---
+  - name: request-size-limiting
+    config:
+      allowed_payload_size: 50
+      size_unit: megabytes
+      require_content_length: false
+
+  # --- Correlation ID ---
+  - name: correlation-id
+    config:
+      header_name: X-Request-ID
+      generator: uuid#counter
+      echo_downstream: true
+
+  # --- Prometheus Metrics ---
+  - name: prometheus
+    config:
+      status_code_metrics: true
+      latency_metrics: true
+      bandwidth_metrics: true
+      upstream_health_metrics: true
+
+# =====================================================
+# Consumers (para autenticação futura)
+# =====================================================
+consumers:
+  - username: portal-web
+    custom_id: portal-web-client
+    keyauth_credentials:
+      - key: ${KONG_PORTAL_API_KEY:-condohome-portal-key}
+
+  - username: portaria-app
+    custom_id: portaria-app-client
+    keyauth_credentials:
+      - key: ${KONG_PORTARIA_API_KEY:-condohome-portaria-key}
+
+  - username: n8n-orchestrator
+    custom_id: n8n-orchestrator-client
+    keyauth_credentials:
+      - key: ${KONG_N8N_API_KEY:-condohome-n8n-key}
+
+  - username: mobile-app
+    custom_id: mobile-app-client
+    keyauth_credentials:
+      - key: ${KONG_MOBILE_API_KEY:-condohome-mobile-key}

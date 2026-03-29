@@ -32,6 +32,7 @@ infra-condohome-sre/
 │   ├── booking/                  # ms-condohome-booking (:8087)
 │   ├── finance/                  # ms-condohome-finance (:8088)
 │   ├── gateway/                  # ms-condohome-gateway (:8080)
+│   ├── kong/                     # Kong API Gateway (:8000)
 │   ├── portal-web/               # portal-condohome-web (:3000)
 │   ├── assistente-portaria/      # assistente-portaria (:3001)
 │   └── n8n/                      # N8N (:5678)
@@ -64,12 +65,20 @@ infra-condohome-sre/
 │   ├── local/
 │   │   ├── start.sh              # Gerenciar ambiente local
 │   │   └── build-all.sh          # Compilar todos os microserviços
+│   ├── kong/
+│   │   ├── manage.sh             # Start/stop/restart do Kong
+│   │   ├── provision.sh          # Provisionar services, routes, plugins
+│   │   └── healthcheck.sh        # Health check do Kong + upstreams
 │   ├── secrets/
 │   │   └── manage-secrets.sh     # Gestão de secrets (GitHub Envs + K8s)
 │   └── cloud/
 │       ├── hostinger/provision.sh
 │       ├── digitalocean/provision.sh
 │       └── azure/provision.sh
+├── configs/
+│   ├── kong/
+│   │   └── kong.yml              # Configuração declarativa (DB-less)
+│   └── ...
 ├── docker-compose.yml            # Master compose (orquestra tudo)
 └── Makefile                      # Atalhos rápidos
 ```
@@ -106,6 +115,58 @@ make stop
 # 9. Reset total (remove volumes)
 make clean
 ```
+
+---
+
+## Kong API Gateway
+
+O Kong Gateway atua como API Gateway centralizado, fornecendo roteamento, rate limiting, CORS, autenticação, logging e métricas para todos os microserviços.
+
+Para documentação completa, consulte [docs/kong-gateway.md](docs/kong-gateway.md).
+
+### Quick Start
+
+```bash
+# Iniciar Kong + provisionar tudo
+make kong-start
+
+# Verificar status
+make kong-status
+
+# Health check completo
+make kong-health
+
+# Ver logs
+make kong-logs
+
+# Parar
+make kong-stop
+
+# Re-provisionar (após alterar configurações)
+make kong-provision
+```
+
+### Portas do Kong
+
+| Serviço | Porta | Descrição |
+|---|---|---|
+| Kong Proxy HTTP | 8000 | Porta principal para requisições |
+| Kong Proxy HTTPS | 8443 | Proxy com SSL |
+| Kong Admin API | 8001 | API de administração |
+| Kong Manager GUI | 8002 | Interface web de gerenciamento |
+| Kong PostgreSQL | 5433 | Banco dedicado do Kong |
+
+### Routes
+
+| Service | Route Path | Upstream |
+|---|---|---|
+| register-service | `/api/register` | `condohome-register:8081` |
+| billing-service | `/api/billing` | `condohome-billing:8082` |
+| documents-service | `/api/documents` | `condohome-documents:8083` |
+| ai-assistant-service | `/api/ai` | `condohome-ai-assistant:8085` |
+| notification-service | `/api/notification` | `condohome-notification:8086` |
+| booking-service | `/api/booking` | `condohome-booking:8087` |
+| finance-service | `/api/finance` | `condohome-finance:8088` |
 
 ---
 
@@ -237,7 +298,11 @@ make provision-azure-aks     # AKS (Kubernetes gerenciado)
 | Finance | 8088 | Financeiro |
 | **Portal Web** | **3000** | **Frontend Admin** |
 | **Assistente Portaria** | **3001** | **Frontend Portaria** |
+| **Kong Proxy** | **8000** | **API Gateway (Kong)** |
+| Kong Admin | 8001 | Admin API do Kong |
+| Kong Manager | 8002 | GUI do Kong |
 | PostgreSQL | 5432 | Banco de dados |
+| Kong PostgreSQL | 5433 | Banco do Kong |
 | Redis | 6379 | Cache |
 | N8N | 5678 | Orquestração |
 | pgAdmin | 5050 | Admin DB (dev) |
@@ -280,6 +345,19 @@ make k8s-prod                # Deploy production
 make k8s-secrets             # Criar K8s secrets
 make k8s-status              # Status dos pods
 make k8s-logs POD=register   # Logs de um pod
+
+# Kong API Gateway
+make kong-start              # Iniciar Kong + provisionar
+make kong-stop               # Parar Kong
+make kong-restart             # Reiniciar Kong
+make kong-status              # Status do Kong
+make kong-health              # Health check completo
+make kong-logs                # Ver logs
+make kong-provision           # Re-provisionar configs
+make kong-reset               # Remover todas as configs
+make kong-export              # Exportar configuração
+make kong-shell               # Shell no container
+make kong-clean               # Reset total (remove volumes)
 
 # Cloud
 make provision-hostinger     # Provisionar Hostinger VPS
