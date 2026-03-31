@@ -91,8 +91,8 @@ start() {
     if [ "${KONG_STANDALONE:-false}" = "true" ]; then
         $compose_cmd up -d
     else
-        # No compose principal, subir apenas os servicos do Kong
-        $compose_cmd --profile backend up -d $KONG_SERVICES
+        # Kong faz parte da infra (sem profile), sobe com docker compose up -d
+        $compose_cmd up -d $KONG_SERVICES
     fi
 
     log_info "Aguardando Kong ficar saudavel..."
@@ -126,7 +126,7 @@ stop() {
     if [ "${KONG_STANDALONE:-false}" = "true" ]; then
         $compose_cmd down
     else
-        # No compose principal, parar apenas os servicos do Kong
+        # Kong faz parte da infra, parar apenas os servicos do Kong
         $compose_cmd stop $KONG_SERVICES
         $compose_cmd rm -f $KONG_SERVICES
     fi

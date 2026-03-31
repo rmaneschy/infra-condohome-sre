@@ -21,7 +21,7 @@ usage() {
     echo "Uso: $0 [OPCAO]"
     echo ""
     echo "Opcoes:"
-    echo "  infra       Subir apenas infraestrutura (PostgreSQL, Redis)"
+    echo "  infra       Subir apenas infraestrutura (PostgreSQL, Redis, Kong)"
     echo "  tools       Subir infra + ferramentas (pgAdmin, Redis Commander)"
     echo "  backend     Subir infra + todos os microservicos backend"
     echo "  frontend    Subir infra + gateway + frontends (portal-web, portaria)"
@@ -33,7 +33,7 @@ usage() {
     echo "  clean       Parar e remover volumes (RESET TOTAL)"
     echo ""
     echo "Exemplos:"
-    echo "  $0 infra                  # Apenas PostgreSQL e Redis"
+    echo "  $0 infra                  # PostgreSQL + Redis + Kong"
     echo "  $0 backend                # Infra + todos os servicos"
     echo "  $0 service register       # Infra + ms-condohome-register"
     echo "  $0 logs billing           # Logs do ms-condohome-billing"
@@ -53,12 +53,15 @@ load_env() {
 }
 
 start_infra() {
-    echo -e "${BLUE}Iniciando infraestrutura (PostgreSQL + Redis)...${NC}"
+    echo -e "${BLUE}Iniciando infraestrutura (PostgreSQL + Redis + Kong)...${NC}"
     cd "$SRE_DIR"
-    docker compose up -d postgres redis
+    docker compose up -d postgres redis kong-database kong-migrations kong
     echo -e "${GREEN}Infraestrutura iniciada!${NC}"
-    echo -e "  PostgreSQL: localhost:${POSTGRES_PORT:-5432}"
-    echo -e "  Redis:      localhost:${REDIS_PORT:-6379}"
+    echo -e "  PostgreSQL:   localhost:${POSTGRES_PORT:-5432}"
+    echo -e "  Redis:        localhost:${REDIS_PORT:-6379}"
+    echo -e "  Kong Proxy:   http://localhost:${KONG_PROXY_PORT:-8000}"
+    echo -e "  Kong Admin:   http://localhost:${KONG_ADMIN_PORT:-8001}"
+    echo -e "  Kong Manager: http://localhost:${KONG_ADMIN_GUI_PORT:-8002}"
 }
 
 start_tools() {

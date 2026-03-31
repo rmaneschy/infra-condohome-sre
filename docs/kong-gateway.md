@@ -222,11 +222,13 @@ Este script verifica:
 
 ## Integracao com Docker Compose
 
-O Kong esta definido no `docker-compose.yml` principal com os profiles `backend` e `full`:
+O Kong esta definido no `docker-compose.yml` principal **sem profile** (infraestrutura compartilhada), assim como PostgreSQL e Redis:
 
-- `docker compose --profile backend up -d` sobe infra + Kong + microservicos
-- `docker compose --profile full up -d` sobe tudo (infra + Kong + backend + frontend + N8N)
+- `docker compose up -d` sobe infra completa: PostgreSQL + Redis + Kong
+- `docker compose --profile backend up -d` sobe infra + microservicos
+- `docker compose --profile full up -d` sobe tudo (infra + backend + frontend + N8N)
 - `make kong-start` sobe apenas os 3 servicos do Kong (kong-database, kong-migrations, kong)
+- `make infra` sobe PostgreSQL + Redis + Kong
 
 Os servicos do Kong compartilham a rede `condohome-net` com todos os microservicos, permitindo que as rotas do Kong apontem para os container names (ex: `condohome-register:8081`).
 

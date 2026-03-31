@@ -4,7 +4,7 @@
 ##
 ## Uso:
 ##   Subir tudo:          docker compose --profile full up -d
-##   Apenas infra:        docker compose up -d
+##   Apenas infra:        docker compose up -d  (PostgreSQL + Redis + Kong)
 ##   Infra + tools:       docker compose --profile tools up -d
 ##   Serviços backend:    docker compose --profile backend up -d
 ##   Apenas frontend:    docker compose --profile frontend up -d
@@ -100,7 +100,8 @@ services:
       - tools
 
   # =====================================================
-  # KONG API GATEWAY (profile: backend, full)
+  # KONG API GATEWAY (shared infrastructure - no profile)
+  # Sobe junto com PostgreSQL e Redis via: docker compose up -d
   # =====================================================
   kong-database:
     image: postgres:16-alpine
@@ -121,9 +122,6 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
-    profiles:
-      - backend
-      - full
 
   kong-migrations:
     image: kong:${KONG_VERSION:-3.9}
@@ -142,9 +140,6 @@ services:
       kong-database:
         condition: service_healthy
     restart: on-failure
-    profiles:
-      - backend
-      - full
 
   kong:
     image: kong:${KONG_VERSION:-3.9}
@@ -189,9 +184,6 @@ services:
       retries: 5
       start_period: 30s
     restart: unless-stopped
-    profiles:
-      - backend
-      - full
 
   # =====================================================
   # BACKEND SERVICES (profile: backend, full)
