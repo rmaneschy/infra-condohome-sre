@@ -3,12 +3,15 @@
 # Atalhos para comandos comuns de infraestrutura
 # =====================================================
 
-.PHONY: help infra tools backend frontend full stop status logs clean build \
+.PHONY: help validate infra tools backend frontend full stop status logs clean build \
 	kong-start kong-stop kong-restart kong-status kong-health kong-logs \
 	kong-provision kong-reset kong-export kong-shell kong-clean
 
 help: ## Exibir ajuda
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+validate: ## Validar requisitos do ambiente (uso: make validate ENV=local)
+	@bash scripts/validate-requirements.sh $(ENV)
 
 # =====================================================
 # Docker Compose - Desenvolvimento Local

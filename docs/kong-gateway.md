@@ -1,12 +1,12 @@
 # Kong API Gateway - CondoHome Platform
 
-## Visao Geral
+## Visão Geral
 
-O Kong Gateway atua como API Gateway centralizado da plataforma CondoHome, substituindo (ou complementando) o Spring Cloud Gateway. Ele fornece roteamento, rate limiting, CORS, autenticacao, logging, metricas e circuit breaker para todos os microservicos.
+O Kong Gateway atua como API Gateway centralizado da plataforma CondoHome, substituindo (ou complementando) o Spring Cloud Gateway. Ele fornece roteamento, rate limiting, CORS, autenticação, logging, métricas e circuit breaker para todos os microserviços.
 
 ## Arquitetura
 
-```
+```text
                     +------------------+
                     |   Portal Web     |
                     |   (port 3000)    |
@@ -32,84 +32,36 @@ O Kong Gateway atua como API Gateway centralizado da plataforma CondoHome, subst
    +--------+ +--------+
 ```
 
-## Quick Start
+## Integração com Docker Compose
 
-### 1. Iniciar Kong (integrado com microservicos)
+O Kong está definido no `docker-compose.yml` principal **sem profile** (infraestrutura compartilhada), assim como PostgreSQL e Redis. Isso significa que ele é considerado parte da infraestrutura base da plataforma.
 
-O Kong faz parte do `docker-compose.yml` principal (projeto `condohome-platform`), na mesma rede `condohome-net` dos microservicos. Isso permite que o Kong resolva os nomes dos containers diretamente.
+- `docker compose up -d` sobe a infra completa: PostgreSQL + Redis + Kong
+- `docker compose --profile backend up -d` sobe infra + microserviços
+- `docker compose --profile full up -d` sobe tudo (infra + backend + frontend + N8N)
+- `make kong-start` sobe apenas os 3 serviços do Kong (kong-database, kong-migrations, kong) e executa o provisionamento
+- `make infra` sobe PostgreSQL + Redis + Kong
 
-```bash
-# Iniciar Kong + provisionar (recomendado)
-make kong-start
+Os serviços do Kong compartilham a rede `condohome-net` com todos os microserviços, permitindo que as rotas do Kong apontem para os container names (ex: `condohome-register:8081`).
 
-# Ou subir tudo junto (infra + backend + Kong)
-make backend
+## Configurações Detalhadas
 
-# Ou subir a plataforma completa
-make full
-```
+### Portas Expostas
 
-O `make kong-start` executa:
-1. Sobe o PostgreSQL dedicado do Kong (porta 5433)
-2. Executa as migrations do Kong
-3. Inicia o Kong Gateway
-4. Provisiona services, routes, plugins e consumers
-
-### Modo Standalone (Kong isolado)
-
-Para testar o Kong sem subir os microservicos:
-
-```bash
-KONG_STANDALONE=true make kong-start
-```
-
-Isso usa o compose em `docker/kong/docker-compose.yml` com rede externa.
-
-### 2. Verificar status
-
-```bash
-make kong-status
-make kong-health
-```
-
-### 3. Parar Kong
-
-```bash
-make kong-stop
-```
-
-## Comandos Makefile
-
-| Comando | Descricao |
-|---------|-----------|
-| `make kong-start` | Iniciar Kong + provisionar tudo |
-| `make kong-stop` | Parar Kong Gateway |
-| `make kong-restart` | Reiniciar Kong Gateway |
-| `make kong-status` | Verificar status dos containers |
-| `make kong-health` | Health check completo (Kong + services) |
-| `make kong-logs` | Ver logs do Kong |
-| `make kong-provision` | Re-provisionar services, routes e plugins |
-| `make kong-reset` | Remover TODAS as configuracoes |
-| `make kong-export` | Exportar configuracao atual |
-| `make kong-shell` | Abrir shell no container do Kong |
-| `make kong-clean` | Parar e remover volumes |
-
-## Portas
-
-| Servico | Porta | Descricao |
+| Serviço | Porta | Descrição |
 |---------|-------|-----------|
-| Kong Proxy HTTP | 8000 | Porta principal para requisicoes |
-| Kong Proxy HTTPS | 8443 | Proxy com SSL |
-| Kong Admin API | 8001 | API de administracao |
+| Kong Proxy HTTP | 8000 | Porta principal para requisições de clientes |
+| Kong Proxy HTTPS | 8443 | Proxy com suporte a SSL/TLS |
+| Kong Admin API | 8001 | API de administração (interna) |
 | Kong Admin SSL | 8444 | Admin API com SSL |
-| Kong Manager GUI | 8002 | Interface web de gerenciamento |
-| Kong PostgreSQL | 5433 | Banco dedicado do Kong |
+| Kong Manager GUI | 8002 | Interface web de gerenciamento visual |
+| Kong PostgreSQL | 5433 | Banco de dados dedicado do Kong |
 
-## Services e Routes
+### Services e Routes Provisionados
 
-Todos os microservicos sao registrados automaticamente pelo script de provisionamento:
+O script `scripts/kong/provision.sh` registra automaticamente os seguintes serviços e rotas na inicialização:
 
-| Service | Route Path | Upstream |
+| Service | Route Path | Upstream (Container) |
 |---------|-----------|----------|
 | register-service | `/api/register` | `condohome-register:8081` |
 | billing-service | `/api/billing` | `condohome-billing:8082` |
@@ -119,39 +71,41 @@ Todos os microservicos sao registrados automaticamente pelo script de provisiona
 | booking-service | `/api/booking` | `condohome-booking:8087` |
 | finance-service | `/api/finance` | `condohome-finance:8088` |
 
-## Plugins
+### Plugins Configurados
 
-### Plugins Globais
+O Kong utiliza plugins para estender suas funcionalidades. Eles são aplicados globalmente ou por serviço.
 
-| Plugin | Descricao |
+#### Plugins Globais
+
+| Plugin | Descrição e Configuração |
 |--------|-----------|
-| `cors` | CORS com origens permitidas (localhost:3000, localhost:5173, condohome.com.br) |
-| `rate-limiting` | 120 req/min, 3600 req/hora (global) |
-| `request-size-limiting` | Maximo 50MB por requisicao |
-| `correlation-id` | Header `X-Request-ID` para rastreamento |
-| `prometheus` | Metricas para monitoramento |
-| `bot-detection` | Deteccao de bots maliciosos |
-| `response-transformer` | Remove headers internos (X-Powered-By, Server) |
+| `cors` | Permite requisições de `localhost:3000`, `localhost:5173` e domínios de produção. Expõe headers de paginação. |
+| `rate-limiting` | Limita requisições a 120/minuto e 3600/hora por IP. Retorna HTTP 429 se excedido. |
+| `request-size-limiting` | Bloqueia payloads maiores que 50MB para evitar ataques de exaustão de recursos. |
+| `correlation-id` | Injeta o header `X-Request-ID` (UUID) em todas as requisições para rastreabilidade distribuída. |
+| `prometheus` | Expõe métricas de latência, banda e status HTTP no endpoint `/metrics` da Admin API. |
+| `bot-detection` | Identifica e bloqueia bots maliciosos conhecidos baseados no User-Agent. |
+| `response-transformer` | Remove headers internos (`X-Powered-By`, `Server`) por segurança. |
 
-### Plugins por Service
+#### Plugins por Service
 
-| Service | Plugin | Configuracao |
+| Service | Plugin | Configuração |
 |---------|--------|-------------|
-| ai-assistant | `rate-limiting` | 30 req/min, 500 req/hora (mais restritivo) |
-| billing | `request-transformer` | Adiciona header `X-Internal-Service` |
+| ai-assistant | `rate-limiting` | Mais restritivo: 30 req/min, 500 req/hora (devido a custos de API externa). |
+| billing | `request-transformer` | Adiciona header interno `X-Internal-Service:kong-gateway` para validação no backend. |
 
-## Consumers e Autenticacao
+### Consumers e Autenticação (API Keys)
 
-Consumers pre-configurados para autenticacao via API Key:
+Consumers representam clientes ou aplicações que consomem a API. O provisionamento cria os seguintes consumers com suporte a autenticação via API Key:
 
 | Consumer | Custom ID | Uso |
 |----------|-----------|-----|
-| portal-web | portal-web-client | Portal administrativo |
+| portal-web | portal-web-client | Portal administrativo (React) |
 | portaria-app | portaria-app-client | Assistente de portaria |
-| n8n-orchestrator | n8n-orchestrator-client | Orquestrador N8N |
+| n8n-orchestrator | n8n-orchestrator-client | Orquestrador N8N (Automações) |
 | mobile-app | mobile-app-client | App mobile (React Native) |
 
-Para ativar autenticacao por API Key em uma rota, adicione o plugin `key-auth`:
+Para ativar a autenticação por API Key em uma rota específica, adicione o plugin `key-auth`:
 
 ```bash
 curl -X POST http://localhost:8001/routes/register-api/plugins \
@@ -159,24 +113,93 @@ curl -X POST http://localhost:8001/routes/register-api/plugins \
   -d '{"name": "key-auth", "config": {"key_names": ["apikey", "X-API-Key"]}}'
 ```
 
-## Configuracao Declarativa (DB-less)
+## Operacionalização Prática
 
-Para ambientes onde nao se deseja usar banco de dados, existe uma configuracao declarativa em `configs/kong/kong.yml`. Para usar:
+### 1. Iniciar e Provisionar (Local)
 
-1. Altere no docker-compose:
+O fluxo padrão para desenvolvimento local é:
+
+```bash
+# Inicia a infraestrutura (PostgreSQL, Redis, Kong) e provisiona o Kong
+make kong-start
+```
+
+O comando acima executa:
+1. Sobe o PostgreSQL dedicado do Kong (porta 5433)
+2. Executa as migrations do Kong (`kong migrations bootstrap`)
+3. Inicia o Kong Gateway
+4. Aguarda o Kong ficar saudável
+5. Executa `scripts/kong/provision.sh` para registrar services, routes, plugins e consumers.
+
+### 2. Modo Standalone (Kong Isolado)
+
+Para testar o Kong sem subir o resto da infraestrutura do `docker-compose.yml` principal:
+
+```bash
+KONG_STANDALONE=true make kong-start
+```
+
+Isso utiliza o arquivo `docker/kong/docker-compose.yml` com uma rede externa.
+
+### 3. Comandos de Gerenciamento (Makefile)
+
+| Comando | Descrição |
+|---------|-----------|
+| `make kong-start` | Iniciar Kong + provisionar tudo |
+| `make kong-stop` | Parar Kong Gateway |
+| `make kong-restart` | Reiniciar Kong Gateway |
+| `make kong-status` | Verificar status dos containers do Kong |
+| `make kong-health` | Health check completo (Kong + upstreams) |
+| `make kong-logs` | Ver logs do Kong |
+| `make kong-provision` | Re-provisionar services, routes e plugins |
+| `make kong-reset` | Remover TODAS as configurações do Kong via Admin API |
+| `make kong-export` | Exportar configuração atual (requer `deck`) |
+| `make kong-shell` | Abrir shell interativo no container do Kong |
+| `make kong-clean` | Parar Kong e remover volumes de dados |
+
+### 4. Configuração Declarativa (DB-less)
+
+Para ambientes onde não se deseja usar banco de dados (ex: CI/CD rápido ou edge nodes), existe uma configuração declarativa em `configs/kong/kong.yml`.
+
+Para usar o modo DB-less:
+1. Altere o `docker-compose.yml`:
    ```yaml
    environment:
      KONG_DATABASE: "off"
      KONG_DECLARATIVE_CONFIG: /etc/kong/kong.yml
    volumes:
-     - ../../configs/kong/kong.yml:/etc/kong/kong.yml:ro
+     - ./configs/kong/kong.yml:/etc/kong/kong.yml:ro
    ```
+2. Remova os serviços `kong-database` e `kong-migrations`.
 
-2. Remova os services `kong-database` e `kong-migrations`
+## Monitoramento e Health Checks
 
-## Variaveis de Ambiente
+### Prometheus
 
-Adicione ao seu `.env.local`:
+O Kong expõe métricas no formato Prometheus no endpoint `/metrics` da Admin API:
+
+```bash
+curl http://localhost:8001/metrics
+```
+
+### Health Check Automatizado
+
+O repositório inclui um script para validar a saúde de toda a malha de roteamento:
+
+```bash
+make kong-health
+# ou
+bash scripts/kong/healthcheck.sh
+```
+
+Este script verifica:
+1. Disponibilidade da Kong Admin API
+2. Disponibilidade do Kong Proxy
+3. Cada microserviço através do proxy (acessando `/api/{service}/actuator/health`)
+
+## Variáveis de Ambiente
+
+As seguintes variáveis devem estar presentes no seu `.env.local` (ou `.env.production`):
 
 ```bash
 # --- Kong Gateway ---
@@ -192,94 +215,52 @@ KONG_PG_PASSWORD=kong123
 KONG_PG_DATABASE=kong
 KONG_LOG_LEVEL=info
 
-# --- Kong API Keys (producao) ---
-KONG_PORTAL_API_KEY=
-KONG_PORTARIA_API_KEY=
-KONG_N8N_API_KEY=
-KONG_MOBILE_API_KEY=
+# --- Kong API Keys (produção) ---
+KONG_PORTAL_API_KEY=sua_chave_segura_aqui
+KONG_PORTARIA_API_KEY=sua_chave_segura_aqui
+KONG_N8N_API_KEY=sua_chave_segura_aqui
+KONG_MOBILE_API_KEY=sua_chave_segura_aqui
 ```
-
-## Monitoramento
-
-### Prometheus
-
-O Kong expoe metricas no endpoint `/metrics` da Admin API:
-
-```bash
-curl http://localhost:8001/metrics
-```
-
-### Health Check Automatizado
-
-```bash
-bash scripts/kong/healthcheck.sh
-```
-
-Este script verifica:
-- Kong Admin API
-- Kong Proxy
-- Cada microservico via proxy (actuator/health)
-
-## Integracao com Docker Compose
-
-O Kong esta definido no `docker-compose.yml` principal **sem profile** (infraestrutura compartilhada), assim como PostgreSQL e Redis:
-
-- `docker compose up -d` sobe infra completa: PostgreSQL + Redis + Kong
-- `docker compose --profile backend up -d` sobe infra + microservicos
-- `docker compose --profile full up -d` sobe tudo (infra + backend + frontend + N8N)
-- `make kong-start` sobe apenas os 3 servicos do Kong (kong-database, kong-migrations, kong)
-- `make infra` sobe PostgreSQL + Redis + Kong
-
-Os servicos do Kong compartilham a rede `condohome-net` com todos os microservicos, permitindo que as rotas do Kong apontem para os container names (ex: `condohome-register:8081`).
-
-## Producao
-
-Para producao, considere:
-
-1. **SSL/TLS**: Configure certificados no Kong ou use um load balancer externo
-2. **Rate Limiting com Redis**: Mude `policy` de `local` para `redis` e configure o Redis
-3. **API Keys**: Gere chaves seguras e armazene como secrets
-4. **IP Restriction**: Ative o plugin para restringir IPs de origem
-5. **Logging**: Configure o plugin `file-log` ou `http-log` para enviar logs para um agregador
-6. **Backup**: Exporte a configuracao periodicamente com `make kong-export`
 
 ## Troubleshooting
 
-### Kong nao inicia
+### Kong não inicia ou fica em "restarting"
 
+**Causa comum:** A porta 5433 (PostgreSQL do Kong) ou 8000/8001 já está em uso.
+**Solução:**
 ```bash
 # Verificar logs
 make kong-logs
 
-# Verificar se a porta 5433 esta livre
+# Verificar portas em uso
 lsof -i :5433
+lsof -i :8000
 
-# Recriar do zero
+# Recriar do zero (apaga dados)
 make kong-clean
 make kong-start
 ```
 
-### Routes nao funcionam
+### Rotas retornam 404 Not Found
 
+**Causa comum:** O provisionamento não rodou ou falhou.
+**Solução:**
 ```bash
-# Verificar se os services estao registrados
-curl http://localhost:8001/services | python3 -m json.tool
+# Verificar se os services estão registrados
+curl -s http://localhost:8001/services | grep name
 
-# Verificar se as routes estao corretas
-curl http://localhost:8001/routes | python3 -m json.tool
-
-# Testar diretamente via proxy
-curl -v http://localhost:8000/api/register/actuator/health
+# Rodar o provisionamento manualmente
+make kong-provision
 ```
 
-### Rate limiting muito restritivo
+### Rate limiting muito restritivo (Erro 429)
 
+**Causa comum:** O limite global de 120 req/min foi atingido durante testes de carga.
+**Solução:**
+Ajustar via Admin API:
 ```bash
-# Verificar headers de rate limit na resposta
-curl -v http://localhost:8000/api/register/actuator/health 2>&1 | grep -i ratelimit
-
-# Ajustar via Admin API
 curl -X PATCH http://localhost:8001/plugins/{plugin-id} \
   -H "Content-Type: application/json" \
   -d '{"config": {"minute": 300}}'
 ```
+*(Você pode obter o `{plugin-id}` acessando `http://localhost:8001/plugins`)*

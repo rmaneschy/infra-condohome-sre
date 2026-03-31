@@ -16,11 +16,13 @@ Este repositório fornece toda a infraestrutura necessária para rodar a platafo
 | **Kubernetes** | Kustomize (base + overlays) | Deploy em cluster K8s (local, staging, prod) |
 | **Cloud VPS** | Scripts de provisionamento | Hostinger, DigitalOcean, Azure |
 
+📚 **Documentação Completa de Operacionalização:** Consulte o [Guia Prático de Operacionalização](docs/operationalization.md) para o passo a passo detalhado de provisionamento em cada ambiente (Local, VPS e Kubernetes).
+
 ---
 
 ## Estrutura do Repositório
 
-```
+```text
 infra-condohome-sre/
 ├── docker/                       # Docker Compose por domínio
 │   ├── shared/                   # PostgreSQL + Redis + init scripts
@@ -38,49 +40,42 @@ infra-condohome-sre/
 │   └── n8n/                      # N8N (:5678)
 ├── kubernetes/                   # Manifestos Kubernetes
 │   ├── base/                     # Recursos base por domínio
-│   │   ├── shared/               # Namespace, PostgreSQL, Redis, Secrets
-│   │   ├── register/             # Deployment + Service
-│   │   ├── billing/
-│   │   ├── documents/
-│   │   ├── booking/
-│   │   ├── notification/
-│   │   ├── finance/
-│   │   ├── ai-assistant/
-│   │   ├── gateway/              # + Ingress
-│   │   ├── portal-web/           # + Ingress (condohome.com.br)
-│   │   ├── assistente-portaria/  # + Ingress (portaria.condohome.com.br)
-│   │   └── n8n/
-│   └── overlays/                 # Customizações por ambiente
-│       ├── local/                # Replicas: 1, resources mínimos
-│       ├── staging/              # Replicas: 1-2, resources médios
-│       └── production/           # Replicas: 2-3, resources altos
+│   └── overlays/                 # Customizações por ambiente (local, staging, prod)
 ├── configs/
-│   ├── envs/
-│   │   ├── .env.local            # Variáveis para dev local
-│   │   ├── .env.staging          # Variáveis para staging
-│   │   └── .env.production       # Variáveis para production
-│   └── nginx/
-│       └── condohome.conf        # Reverse proxy para produção
+│   ├── envs/                     # Templates de variáveis de ambiente (.env.*.example)
+│   ├── kong/                     # Configuração declarativa do Kong (kong.yml)
+│   └── nginx/                    # Reverse proxy para produção
 ├── scripts/
-│   ├── local/
-│   │   ├── start.sh              # Gerenciar ambiente local
-│   │   └── build-all.sh          # Compilar todos os microserviços
-│   ├── kong/
-│   │   ├── manage.sh             # Start/stop/restart do Kong
-│   │   ├── provision.sh          # Provisionar services, routes, plugins
-│   │   └── healthcheck.sh        # Health check do Kong + upstreams
-│   ├── secrets/
-│   │   └── manage-secrets.sh     # Gestão de secrets (GitHub Envs + K8s)
-│   └── cloud/
-│       ├── hostinger/provision.sh
-│       ├── digitalocean/provision.sh
-│       └── azure/provision.sh
-├── configs/
-│   ├── kong/
-│   │   └── kong.yml              # Configuração declarativa (DB-less)
-│   └── ...
+│   ├── validate-requirements.sh  # Validador de pré-requisitos por ambiente
+│   ├── local/                    # Scripts para ambiente local (start, build)
+│   ├── kong/                     # Scripts de gestão e provisionamento do Kong
+│   ├── secrets/                  # Gestão de secrets (GitHub Envs + K8s)
+│   └── cloud/                    # Scripts de bootstrap para VPS/Cloud
+├── docs/
+│   ├── kong-gateway.md           # Documentação detalhada do Kong Gateway
+│   └── operationalization.md     # Guia passo a passo de operacionalização
 ├── docker-compose.yml            # Master compose (orquestra tudo)
 └── Makefile                      # Atalhos rápidos
+```
+
+---
+
+## Validação de Requisitos
+
+Antes de iniciar o provisionamento em qualquer ambiente, é altamente recomendado rodar o script de validação. Ele verifica se todas as ferramentas, portas, recursos e configurações necessárias estão disponíveis, e fornece instruções de correção específicas para o seu Sistema Operacional (Linux, macOS, WSL).
+
+```bash
+# Validar ambiente local (Docker Compose)
+bash scripts/validate-requirements.sh local
+
+# Validar ambiente VPS (Hostinger, DigitalOcean, Azure)
+bash scripts/validate-requirements.sh vps
+
+# Validar ambiente Kubernetes
+bash scripts/validate-requirements.sh k8s
+
+# Validar ambiente CI/CD (GitHub Actions)
+bash scripts/validate-requirements.sh ci
 ```
 
 ---
@@ -88,31 +83,34 @@ infra-condohome-sre/
 ## Quick Start - Desenvolvimento Local
 
 ```bash
-# 1. Subir apenas infraestrutura (PostgreSQL + Redis)
+# 1. Validar requisitos locais
+bash scripts/validate-requirements.sh local
+
+# 2. Subir apenas infraestrutura (PostgreSQL + Redis + Kong)
 make infra
 
-# 2. Subir infra + ferramentas (pgAdmin, Redis Commander)
-make tools
+# 3. Provisionar o Kong Gateway
+make kong-provision
 
-# 3. Subir infra + todos os microserviços
+# 4. Subir infra + todos os microserviços
 make backend
 
-# 4. Subir infra + gateway + frontends
+# 5. Subir infra + gateway + frontends
 make frontend
 
-# 5. Subir tudo (infra + backend + frontend + N8N)
+# 6. Subir tudo (infra + backend + frontend + N8N)
 make full
 
-# 6. Verificar status
+# 7. Verificar status
 make status
 
-# 7. Ver logs de um serviço
+# 8. Ver logs de um serviço
 make logs SERVICE=register
 
-# 8. Parar tudo
+# 9. Parar tudo
 make stop
 
-# 9. Reset total (remove volumes)
+# 10. Reset total (remove volumes)
 make clean
 ```
 
@@ -120,11 +118,11 @@ make clean
 
 ## Kong API Gateway
 
-O Kong Gateway atua como API Gateway centralizado, fornecendo roteamento, rate limiting, CORS, autenticação, logging e métricas para todos os microserviços.
+O Kong Gateway atua como API Gateway centralizado, fornecendo roteamento, rate limiting, CORS, autenticação, logging e métricas para todos os microserviços. Ele está integrado à infraestrutura base e sobe automaticamente com o comando `make infra`.
 
-Para documentação completa, consulte [docs/kong-gateway.md](docs/kong-gateway.md).
+Para documentação completa de arquitetura, plugins e troubleshooting, consulte [docs/kong-gateway.md](docs/kong-gateway.md).
 
-### Quick Start
+### Comandos Rápidos do Kong
 
 ```bash
 # Iniciar Kong + provisionar tudo
@@ -133,7 +131,7 @@ make kong-start
 # Verificar status
 make kong-status
 
-# Health check completo
+# Health check completo (Kong + microserviços)
 make kong-health
 
 # Ver logs
@@ -146,45 +144,11 @@ make kong-stop
 make kong-provision
 ```
 
-### Portas do Kong
-
-| Serviço | Porta | Descrição |
-|---|---|---|
-| Kong Proxy HTTP | 8000 | Porta principal para requisições |
-| Kong Proxy HTTPS | 8443 | Proxy com SSL |
-| Kong Admin API | 8001 | API de administração |
-| Kong Manager GUI | 8002 | Interface web de gerenciamento |
-| Kong PostgreSQL | 5433 | Banco dedicado do Kong |
-
-### Routes
-
-| Service | Route Path | Upstream |
-|---|---|---|
-| register-service | `/api/register` | `condohome-register:8081` |
-| billing-service | `/api/billing` | `condohome-billing:8082` |
-| documents-service | `/api/documents` | `condohome-documents:8083` |
-| ai-assistant-service | `/api/ai` | `condohome-ai-assistant:8085` |
-| notification-service | `/api/notification` | `condohome-notification:8086` |
-| booking-service | `/api/booking` | `condohome-booking:8087` |
-| finance-service | `/api/finance` | `condohome-finance:8088` |
-
 ---
 
 ## Gestão de Secrets com GitHub Environments
 
 A gestão de secrets está integrada com o sistema de **GitHub Environments** do repositório `infra-condohome-cicd`.
-
-### Hierarquia de Secrets (GitHub)
-
-```
-┌─────────────────────────────────────────────┐
-│  Organization Secrets (compartilhados)      │  ← Menor prioridade
-├─────────────────────────────────────────────┤
-│  Repository Secrets (por repo)              │
-├─────────────────────────────────────────────┤
-│  Environment Secrets (por ambiente)         │  ← Maior prioridade
-└─────────────────────────────────────────────┘
-```
 
 ### Comandos de Secrets
 
@@ -214,14 +178,6 @@ make secrets-template
 make k8s-secrets ENV=staging FILE=path/to/staging.secrets
 ```
 
-### Boas Práticas de Secrets
-
-1. **Environment Secrets** para credenciais que variam por ambiente (DB_PASSWORD, API keys)
-2. **Repository Secrets** apenas para valores compartilhados entre ambientes
-3. **Nunca commitar** arquivos `.secrets` no repositório
-4. **Rotacionar** credenciais a cada 90 dias
-5. **Auditar** regularmente com `make secrets-audit`
-
 ---
 
 ## Kubernetes
@@ -247,14 +203,6 @@ make k8s-status
 # Logs
 make k8s-logs POD=register
 ```
-
-### Overlays
-
-| Overlay | Replicas | CPU Request | Memory Request |
-|---|---|---|---|
-| `local` | 1 | 100m | 256Mi |
-| `staging` | 1-2 | 250m | 512Mi |
-| `production` | 2-3 | 500m | 1Gi |
 
 ---
 
@@ -316,7 +264,7 @@ make provision-azure-aks     # AKS (Kubernetes gerenciado)
 make help                    # Lista todos os comandos disponíveis
 
 # Docker Compose
-make infra                   # Subir PostgreSQL + Redis
+make infra                   # Subir PostgreSQL + Redis + Kong
 make tools                   # Subir infra + ferramentas
 make backend                 # Subir infra + microserviços
 make frontend                # Subir infra + gateway + frontends
