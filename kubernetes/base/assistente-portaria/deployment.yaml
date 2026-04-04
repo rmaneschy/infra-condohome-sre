@@ -38,7 +38,7 @@ spec:
             - name: REDIS_URL
               value: "redis://redis:6379/2"
             - name: API_GATEWAY_URL
-              value: "http://gateway:8080"
+              value: "http://kong:8000"
             - name: N8N_WEBHOOK_URL
               value: "http://n8n:5678"
             - name: OPENAI_API_KEY

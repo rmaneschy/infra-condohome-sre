@@ -24,7 +24,7 @@ usage() {
     echo "  infra       Subir apenas infraestrutura (PostgreSQL, Redis, Kong)"
     echo "  tools       Subir infra + ferramentas (pgAdmin, Redis Commander)"
     echo "  backend     Subir infra + todos os microservicos backend"
-    echo "  frontend    Subir infra + gateway + frontends (portal-web, portaria)"
+    echo "  frontend    Subir infra + Kong + frontends (portal-web, portaria)"
     echo "  full        Subir tudo (infra + backend + frontend + N8N)"
     echo "  service     Subir infra + um servico especifico"
     echo "  stop        Parar todos os containers"
@@ -84,15 +84,14 @@ start_backend() {
 
 start_frontend() {
     start_infra
-    echo -e "${BLUE}Iniciando frontend (gateway + portal-web + assistente-portaria)...${NC}"
+    echo -e "${BLUE}Iniciando frontend (Kong + portal-web + assistente-portaria)...${NC}"
     cd "$SRE_DIR"
-    docker compose up -d gateway
     docker compose --profile frontend up -d
     echo -e "${GREEN}Frontend iniciado!${NC}"
-    echo -e "  Gateway:             http://localhost:${GATEWAY_PORT:-8080}"
+    echo -e "  Kong Proxy:          http://localhost:${KONG_PROXY_PORT:-8000}"
     echo -e "  Portal Web (Admin):  http://localhost:${PORTAL_WEB_PORT:-3000}"
     echo -e "  Assistente Portaria: http://localhost:${PORTARIA_PORT:-3001}"
-}
+
 
 start_full() {
     echo -e "${BLUE}Iniciando plataforma completa (full)...${NC}"
@@ -155,7 +154,7 @@ print_services() {
     echo -e "  Kong Proxy:    http://localhost:${KONG_PROXY_PORT:-8000}"
     echo -e "  Kong Admin:    http://localhost:${KONG_ADMIN_PORT:-8001}"
     echo -e "  Kong Manager:  http://localhost:${KONG_ADMIN_GUI_PORT:-8002}"
-    echo -e "  Gateway:       http://localhost:${GATEWAY_PORT:-8080}"
+    echo -e "  Kong Proxy:    http://localhost:${KONG_PROXY_PORT:-8000}"
     echo -e "  Register:      http://localhost:${REGISTER_PORT:-8081}"
     echo -e "  Billing:       http://localhost:${BILLING_PORT:-8082}"
     echo -e "  Documents:     http://localhost:${DOCUMENTS_PORT:-8083}"

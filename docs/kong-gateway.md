@@ -2,7 +2,7 @@
 
 ## Visão Geral
 
-O Kong Gateway atua como API Gateway centralizado da plataforma CondoHome, substituindo (ou complementando) o Spring Cloud Gateway. Ele fornece roteamento, rate limiting, CORS, autenticação, logging, métricas e circuit breaker para todos os microserviços.
+O Kong Gateway atua como API Gateway centralizado da plataforma CondoHome, substituindo completamente o Spring Cloud Gateway legado. Ele fornece roteamento, rate limiting, CORS, autenticação, logging, métricas e circuit breaker para todos os microserviços.
 
 ## Arquitetura
 

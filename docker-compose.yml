@@ -187,35 +187,8 @@ services:
 
   # =====================================================
   # BACKEND SERVICES (profile: backend, full)
+  # Kong API Gateway substitui o ms-condohome-gateway
   # =====================================================
-  gateway:
-    image: ghcr.io/rmaneschy/ms-condohome-gateway:${TAG:-latest}
-    container_name: condohome-gateway
-    build:
-      context: ${GATEWAY_BUILD_CONTEXT:-../ms-condohome-gateway}
-      dockerfile: Dockerfile
-    environment:
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
-      REGISTER_SERVICE_URL: http://condohome-register:8081
-      BILLING_SERVICE_URL: http://condohome-billing:8082
-      DOCUMENTS_SERVICE_URL: http://condohome-documents:8083
-      AI_ASSISTANT_SERVICE_URL: http://condohome-ai-assistant:8085
-      NOTIFICATION_SERVICE_URL: http://condohome-notification:8086
-      BOOKING_SERVICE_URL: http://condohome-booking:8087
-      FINANCE_SERVICE_URL: http://condohome-finance:8088
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
-    ports:
-      - "${GATEWAY_PORT:-8080}:8080"
-    networks:
-      - condohome-net
-    depends_on:
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-    profiles:
-      - backend
-      - full
 
   register:
     image: ghcr.io/rmaneschy/ms-condohome-register:${TAG:-latest}

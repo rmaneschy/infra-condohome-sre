@@ -33,7 +33,6 @@ infra-condohome-sre/
 │   ├── notification/             # ms-condohome-notification (:8086)
 │   ├── booking/                  # ms-condohome-booking (:8087)
 │   ├── finance/                  # ms-condohome-finance (:8088)
-│   ├── gateway/                  # ms-condohome-gateway (:8080)
 │   ├── kong/                     # Kong API Gateway (:8000)
 │   ├── portal-web/               # portal-condohome-web (:3000)
 │   ├── assistente-portaria/      # assistente-portaria (:3001)
@@ -95,7 +94,7 @@ make kong-provision
 # 4. Subir infra + todos os microserviços
 make backend
 
-# 5. Subir infra + gateway + frontends
+# 5. Subir infra + Kong + frontends
 make frontend
 
 # 6. Subir tudo (infra + backend + frontend + N8N)
@@ -236,7 +235,6 @@ make provision-azure-aks     # AKS (Kubernetes gerenciado)
 
 | Serviço | Porta | Descrição |
 |---|---|---|
-| Gateway | 8080 | Ponto de entrada único |
 | Register | 8081 | Cadastros |
 | Billing | 8082 | Cobranças |
 | Documents | 8083 | Documentos |
@@ -267,7 +265,7 @@ make help                    # Lista todos os comandos disponíveis
 make infra                   # Subir PostgreSQL + Redis + Kong
 make tools                   # Subir infra + ferramentas
 make backend                 # Subir infra + microserviços
-make frontend                # Subir infra + gateway + frontends
+make frontend                # Subir infra + Kong + frontends
 make full                    # Subir tudo
 make stop                    # Parar containers
 make status                  # Status dos containers

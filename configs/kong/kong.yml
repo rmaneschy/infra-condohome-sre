@@ -130,22 +130,7 @@ services:
           - http
           - https
 
-  # --- Gateway (Spring Cloud Gateway - legado/fallback) ---
-  - name: gateway-service
-    url: http://condohome-gateway:8080
-    connect_timeout: 10000
-    write_timeout: 30000
-    read_timeout: 30000
-    retries: 2
-    routes:
-      - name: gateway-health-route
-        paths:
-          - /actuator
-        strip_path: false
-        preserve_host: false
-        protocols:
-          - http
-          - https
+
 
 # =====================================================
 # Global Plugins
