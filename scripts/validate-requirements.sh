@@ -651,7 +651,7 @@ validate_local() {
     check_command "gh" "GitHub CLI" || true
 
     log_section "Portas Críticas"
-    check_ports 5432 6379 5433 8000 8001 8002 8080
+    check_ports 5432 6379 5433 8000 8001 8002
 
     log_section "Recursos do Sistema"
     check_disk_space 10
