@@ -15,6 +15,28 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
+# Carregar variaveis de ambiente
+load_env() {
+    # Se ENV não estiver configurado, define o padrão como desenvolvimento
+    export ENV="${ENV:-desenvolvimento}"
+    
+    # Mapeia 'desenvolvimento' para 'local' para manter compatibilidade com os arquivos existentes
+    local env_suffix="$ENV"
+    if [ "$ENV" = "desenvolvimento" ]; then
+        env_suffix="local"
+    fi
+    
+    local env_file="$SRE_DIR/configs/envs/.env.${env_suffix}"
+    
+    if [ -f "$env_file" ]; then
+        set -a
+        source "$env_file"
+        set +a
+    fi
+}
+
+load_env
+
 KONG_ADMIN_URL="${KONG_ADMIN_URL:-http://localhost:8001}"
 
 # =====================================================

@@ -869,7 +869,13 @@ usage() {
 }
 
 main() {
-    local env="${1:-}"
+    # Se não for passado argumento, usa a variável ENV ou o padrão 'local'
+    local env="${1:-${ENV:-local}}"
+    
+    # Mapeia 'desenvolvimento' para 'local' para manter compatibilidade
+    if [ "$env" = "desenvolvimento" ]; then
+        env="local"
+    fi
 
     if [ -z "$env" ]; then
         usage

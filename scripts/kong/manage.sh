@@ -33,7 +33,17 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
 # Carregar variaveis de ambiente
 load_env() {
-    local env_file="$SRE_DIR/configs/envs/.env.local"
+    # Se ENV não estiver configurado, define o padrão como desenvolvimento
+    export ENV="${ENV:-desenvolvimento}"
+    
+    # Mapeia 'desenvolvimento' para 'local' para manter compatibilidade com os arquivos existentes
+    local env_suffix="$ENV"
+    if [ "$ENV" = "desenvolvimento" ]; then
+        env_suffix="local"
+    fi
+    
+    local env_file="$SRE_DIR/configs/envs/.env.${env_suffix}"
+    
     if [ -f "$env_file" ]; then
         set -a
         source "$env_file"

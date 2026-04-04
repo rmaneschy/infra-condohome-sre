@@ -81,9 +81,14 @@ bash scripts/validate-requirements.sh ci
 
 ## Quick Start - Desenvolvimento Local
 
+> **Nota sobre Ambientes:** O projeto utiliza a variável `ENV` para determinar o ambiente de execução. Se não for especificada, o padrão é sempre **`desenvolvimento`** (que carrega o arquivo `.env.local`).
+
 ```bash
-# 1. Validar requisitos locais
-bash scripts/validate-requirements.sh local
+# 1. Validar requisitos locais (usa o ambiente padrão: desenvolvimento/local)
+make validate
+
+# Ou especificando o ambiente:
+# make validate ENV=production
 
 # 2. Subir apenas infraestrutura (PostgreSQL + Redis + Kong)
 make infra

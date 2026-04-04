@@ -41,14 +41,26 @@ usage() {
 }
 
 load_env() {
-    local env_file="$SRE_DIR/configs/envs/.env.local"
+    # Se ENV não estiver configurado, define o padrão como desenvolvimento
+    export ENV="${ENV:-desenvolvimento}"
+    
+    # Mapeia 'desenvolvimento' para 'local' para manter compatibilidade com os arquivos existentes
+    local env_suffix="$ENV"
+    if [ "$ENV" = "desenvolvimento" ]; then
+        env_suffix="local"
+    fi
+    
+    local env_file="$SRE_DIR/configs/envs/.env.${env_suffix}"
+    
+    echo -e "${BLUE}Ambiente configurado: ${ENV}${NC}"
+    
     if [ -f "$env_file" ]; then
         set -a
         source "$env_file"
         set +a
-        echo -e "${GREEN}Ambiente local carregado${NC}"
+        echo -e "${GREEN}Arquivo de ambiente carregado: .env.${env_suffix}${NC}"
     else
-        echo -e "${YELLOW}Arquivo .env.local nao encontrado. Usando valores padrao.${NC}"
+        echo -e "${YELLOW}Arquivo .env.${env_suffix} nao encontrado. Usando valores padrao.${NC}"
     fi
 }
 
