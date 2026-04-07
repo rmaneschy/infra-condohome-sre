@@ -50,26 +50,9 @@ validate_kong_running() {
 validate_kong_database() {
     log_section "Validando Banco de Dados do Kong"
     
-    # Verificar conexão com banco
-    if PGPASSWORD="${KONG_PG_PASSWORD:-kong123}" psql -h "$KONG_PG_HOST" -p "$KONG_PG_PORT" -U "$KONG_PG_USER" -d "$KONG_PG_DATABASE" -c "SELECT version();" > /dev/null 2>&1; then
-        log_ok "Conexão com banco de dados do Kong OK"
-    else
-        log_error "Não foi possível conectar ao banco de dados do Kong"
-        EXIT_CODE=1
-        return 1
-    fi
-    
-    # Verificar tabelas
-    log_info "Verificando tabelas do Kong..."
-    local tables=$(PGPASSWORD="${KONG_PG_PASSWORD:-kong123}" psql -h "$KONG_PG_HOST" -p "$KONG_PG_PORT" -U "$KONG_PG_USER" -d "$KONG_PG_DATABASE" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public';" 2>/dev/null)
-    
-    if [ "$tables" -gt 0 ]; then
-        log_ok "Banco de dados do Kong inicializado com $tables tabelas"
-    else
-        log_error "Banco de dados do Kong não foi inicializado corretamente"
-        EXIT_CODE=1
-        return 1
-    fi
+    # Em modo DB-less, o Kong não usa banco de dados
+    log_ok "Kong configurado em modo DB-less (KONG_DATABASE=off)"
+    return 0
 }
 
 validate_services() {
@@ -223,7 +206,7 @@ log_section "Resultado Final"
 if [ $EXIT_CODE -eq 0 ]; then
     echo -e "${GREEN}✓ Todas as validações passaram!${NC}"
     echo -e "${GREEN}✓ Kong está corretamente configurado${NC}"
-    echo -e "${GREEN}✓ Migrations foram executadas com sucesso${NC}"
+    echo -e "${GREEN}✓ Configuração declarativa carregada com sucesso${NC}"
     echo ""
     echo -e "${BLUE}URLs disponíveis:${NC}"
     echo -e "  Kong Proxy:   http://localhost:8000"

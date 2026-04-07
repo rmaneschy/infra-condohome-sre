@@ -103,6 +103,7 @@ start_frontend() {
     echo -e "  Kong Proxy:          http://localhost:${KONG_PROXY_PORT:-8000}"
     echo -e "  Portal Web (Admin):  http://localhost:${PORTAL_WEB_PORT:-3000}"
     echo -e "  Assistente Portaria: http://localhost:${PORTARIA_PORT:-3001}"
+}
 
 
 start_full() {

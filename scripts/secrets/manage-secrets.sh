@@ -28,10 +28,8 @@ REPOS=(
     "ms-condohome-notification"
     "ms-condohome-finance"
     "ms-condohome-ai-assistant"
-    "ms-condohome-gateway"
     "n8n-nodes-condohome"
     "portal-condohome-web"
-    "assistente-portaria"
     "infra-condohome-sre"
     "infra-condohome-cicd"
 )

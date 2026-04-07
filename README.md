@@ -253,7 +253,6 @@ make provision-azure-aks     # AKS (Kubernetes gerenciado)
 | Kong Admin | 8001 | Admin API do Kong |
 | Kong Manager | 8002 | GUI do Kong |
 | PostgreSQL | 5432 | Banco de dados |
-| Kong PostgreSQL | 5433 | Banco do Kong |
 | Redis | 6379 | Cache |
 | N8N | 5678 | Orquestração |
 | pgAdmin | 5050 | Admin DB (dev) |

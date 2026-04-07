@@ -23,7 +23,6 @@ SERVICES=(
     "ms-condohome-notification"
     "ms-condohome-finance"
     "ms-condohome-ai-assistant"
-    "ms-condohome-gateway"
 )
 
 SKIP_TESTS="${SKIP_TESTS:-true}"

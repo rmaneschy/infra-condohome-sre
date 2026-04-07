@@ -15,50 +15,6 @@
 ##
 services:
   # =====================================================
-  # Kong Database (PostgreSQL dedicado)
-  # =====================================================
-  kong-database:
-    image: postgres:16-alpine
-    container_name: condohome-kong-database
-    environment:
-      POSTGRES_USER: ${KONG_PG_USER:-kong}
-      POSTGRES_PASSWORD: ${KONG_PG_PASSWORD:-kong123}
-      POSTGRES_DB: ${KONG_PG_DATABASE:-kong}
-    volumes:
-      - kong_postgres_data:/var/lib/postgresql/data
-    ports:
-      - "${KONG_PG_PORT:-5433}:5432"
-    networks:
-      - condohome-net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${KONG_PG_USER:-kong} -d ${KONG_PG_DATABASE:-kong}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
-  # =====================================================
-  # Kong Migrations (executa uma vez e sai)
-  # =====================================================
-  kong-migrations:
-    image: kong:${KONG_VERSION:-3.9}
-    container_name: condohome-kong-migrations
-    command: kong migrations bootstrap
-    environment:
-      KONG_DATABASE: postgres
-      KONG_PG_HOST: kong-database
-      KONG_PG_PORT: 5432
-      KONG_PG_USER: ${KONG_PG_USER:-kong}
-      KONG_PG_PASSWORD: ${KONG_PG_PASSWORD:-kong123}
-      KONG_PG_DATABASE: ${KONG_PG_DATABASE:-kong}
-    networks:
-      - condohome-net
-    depends_on:
-      kong-database:
-        condition: service_healthy
-    restart: on-failure
-
-  # =====================================================
   # Kong Gateway
   # =====================================================
   kong:
@@ -66,12 +22,8 @@ services:
     container_name: condohome-kong
     environment:
       # Database
-      KONG_DATABASE: postgres
-      KONG_PG_HOST: kong-database
-      KONG_PG_PORT: 5432
-      KONG_PG_USER: ${KONG_PG_USER:-kong}
-      KONG_PG_PASSWORD: ${KONG_PG_PASSWORD:-kong123}
-      KONG_PG_DATABASE: ${KONG_PG_DATABASE:-kong}
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /etc/kong/kong.yml
       # Proxy
       KONG_PROXY_ACCESS_LOG: /dev/stdout
       KONG_ADMIN_ACCESS_LOG: /dev/stdout
@@ -90,6 +42,9 @@ services:
       KONG_TRUSTED_IPS: 0.0.0.0/0,::/0
       KONG_REAL_IP_HEADER: X-Forwarded-For
       KONG_REAL_IP_RECURSIVE: "on"
+    volumes:
+      - ../../configs/kong/kong.conf:/etc/kong/kong.conf
+      - ../../configs/kong/kong.yml:/etc/kong/kong.yml
     ports:
       - "${KONG_PROXY_PORT:-8000}:8000"       # Proxy HTTP
       - "${KONG_PROXY_SSL_PORT:-8443}:8443"   # Proxy HTTPS
@@ -98,11 +53,6 @@ services:
       - "${KONG_ADMIN_GUI_PORT:-8002}:8002"   # Kong Manager GUI
     networks:
       - condohome-net
-    depends_on:
-      kong-database:
-        condition: service_healthy
-      kong-migrations:
-        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "kong", "health"]
       interval: 15s
@@ -111,8 +61,7 @@ services:
       start_period: 30s
     restart: unless-stopped
 
-volumes:
-  kong_postgres_data:
+volumes: {}
 
 networks:
   condohome-net:
